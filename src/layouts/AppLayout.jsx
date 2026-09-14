@@ -133,21 +133,21 @@ export const AppLayout = () => {
       </aside>
 
       {/* MOBILE HEADER */}
-      <header className="md:hidden flex items-center justify-between px-5 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 pt-safe shadow-xs">
+      <header className="md:hidden flex items-center justify-between px-5 py-5 bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 pt-safe shadow-xs min-h-[68px]">
         <NavLink to="/today" className="flex items-center">
-          <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-8 w-auto object-contain max-w-[150px]" />
+          <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-9.5 w-auto object-contain max-w-[160px]" />
         </NavLink>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => openQuickAdd('expense')}
-            className="px-3.5 py-1.5 rounded-full bg-[#0F172A] text-white text-xs font-bold flex items-center gap-1 shadow-sm"
+            className="px-4 py-2 rounded-full bg-[#0F172A] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
           >
-            <Plus className="w-3.5 h-3.5 text-emerald-400" />
+            <Plus className="w-4 h-4 text-emerald-400" />
             <span>Add</span>
           </button>
           <NavLink to="/profile">
-            <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+            <img src={avatarUrl} alt="Avatar" className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-xs" />
           </NavLink>
         </div>
       </header>
