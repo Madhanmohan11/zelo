@@ -160,17 +160,6 @@ export const TodayPage = () => {
             Here's your day at a glance.
           </p>
         </div>
-
-        {/* Desktop / Quick Add Trigger Pill */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => openQuickAdd?.('expense')}
-            className="px-4 py-2 rounded-full bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
-          >
-            <Plus className="w-4 h-4 text-emerald-400" />
-            <span>+ Add Entry</span>
-          </button>
-        </div>
       </div>
 
       {/* MOBILE DAILY PROGRESS (VISIBLE AT THE TOP FOR MOBILE CLARITY) */}
