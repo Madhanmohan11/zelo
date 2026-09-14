@@ -2,20 +2,20 @@
 
 @layer base {
   :root {
-    --bg-primary: #F8FAFC;
-    --text-primary: #0F172A;
-    --text-muted: #64748B;
-    --border-light: #E2E8F0;
+    --bg-primary: #F7F8F5;
+    --text-primary: #17212B;
+    --text-muted: #667085;
+    --border-light: #EAECF0;
     --pastel-green: #D1FAE5;
     --pastel-mint: #A7F3D0;
-    --pastel-yellow: #FDE68A;
-    --pastel-pink: #FECACA;
-    --pastel-purple: #E9D5FF;
+    --pastel-yellow: #FEF3C7;
+    --pastel-pink: #FFEDD5;
+    --pastel-purple: #F3E8FF;
   }
 
   body {
-    background-color: #F8FAFC;
-    color: #0F172A;
+    background-color: #F7F8F5;
+    color: #17212B;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -28,20 +28,19 @@
 
 /* Ambient Background Pastels Glow */
 .ambient-bg {
-  background-color: #F8FAFC;
+  background-color: #F7F8F5;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.45) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(254, 202, 202, 0.35) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(233, 213, 255, 0.35) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(253, 230, 138, 0.35) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(209, 250, 229, 0.35) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(254, 215, 170, 0.25) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(243, 232, 255, 0.25) 0px, transparent 50%);
   background-attachment: fixed;
 }
 
 /* Soft White Cards */
 .soft-card {
   background: #FFFFFF;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 2px 12px -2px rgba(23, 33, 43, 0.03), 0 1px 3px 0 rgba(23, 33, 43, 0.02);
   border-radius: 1.5rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

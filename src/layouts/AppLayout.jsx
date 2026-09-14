@@ -153,12 +153,12 @@ export const AppLayout = () => {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8 max-w-5xl mx-auto w-full">
+      <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8 pb-28 md:pb-8 max-w-6xl mx-auto w-full">
         <Outlet context={{ openQuickAdd }} />
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-2 z-40 pb-safe flex items-center justify-around shadow-lg">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/70 px-3 py-2 z-40 pb-safe flex items-center justify-between shadow-lg">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.path
@@ -166,23 +166,17 @@ export const AppLayout = () => {
             <NavLink
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${
-                isActive ? 'text-emerald-700 font-extrabold bg-[#D1FAE5]/60' : 'text-slate-500 hover:text-slate-900'
+              className={`flex flex-col items-center justify-center py-2 px-2.5 rounded-2xl flex-1 transition-all active:scale-95 ${
+                isActive
+                  ? 'text-emerald-800 font-black bg-emerald-50/90 border border-emerald-100/80 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900 font-semibold'
               }`}
             >
-              <Icon className={`w-5 h-5 mb-0.5 ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
-              <span className="text-[10px] font-bold">{item.label}</span>
+              <Icon className={`w-5 h-5 mb-1 transition-transform ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
+              <span className="text-[10px] tracking-tight">{item.label}</span>
             </NavLink>
           )
         })}
-
-        {/* Quick Add Floating Button on Mobile Bottom Bar */}
-        <button
-          onClick={() => openQuickAdd('expense')}
-          className="flex flex-col items-center justify-center p-3 rounded-full bg-[#0F172A] text-white shadow-xl transform -translate-y-3 border-2 border-white active:scale-95 transition-all"
-        >
-          <Plus className="w-5 h-5 text-emerald-400" />
-        </button>
       </nav>
 
       {/* GLOBAL QUICK ADD MODAL */}
