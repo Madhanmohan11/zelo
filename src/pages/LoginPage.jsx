@@ -79,7 +79,7 @@ export const LoginPage = () => {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-xs font-bold text-slate-500 hover:text-emerald-700 transition-colors"
+                  className="text-xs font-bold text-slate-500 hover:text-emerald-700 transition-colors cursor-pointer"
                 >
                   Forgot password?
                 </button>
@@ -89,7 +89,7 @@ export const LoginPage = () => {
             <div className="pt-2">
               <Button type="submit" variant="primary" fullWidth size="lg" isLoading={isLoading}>
                 <span>Sign In</span>
-                <ArrowRight className="w-4 h-4 ml-1" />
+                <ArrowRight className="w-5 h-5 shrink-0" />
               </Button>
             </div>
           </form>
@@ -105,3 +105,5 @@ export const LoginPage = () => {
     </div>
   )
 }
+
+export default LoginPage
