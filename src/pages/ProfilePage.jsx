@@ -69,7 +69,7 @@ export const ProfilePage = () => {
     { title: 'Daily Settings', icon: Sliders, onClick: () => setIsModalOpen(true) },
     { title: 'Notification Settings', icon: Bell, onClick: () => showToast('Notifications configured in browser', 'info') },
     { title: 'Appearance', icon: Palette, onClick: () => showToast('Appearance set to Soft Light theme', 'info') },
-    { title: 'Help & Support', icon: HelpCircle, onClick: () => showToast('LifeOS Support: support@lifeos.app', 'info') },
+    { title: 'Help & Support', icon: HelpCircle, onClick: () => showToast('ZELO Support: support@zelo.app', 'info') },
     { title: 'Privacy', icon: Shield, onClick: () => showToast('Privacy Policy & RLS Active', 'info') },
   ]
 

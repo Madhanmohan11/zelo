@@ -5,7 +5,7 @@ import { getUserProfile, getUserSettings, updateUserProfile, updateUserSettings 
 const AuthContext = createContext(null)
 
 // Storage key for mock session when Supabase env vars aren't configured yet
-const MOCK_AUTH_KEY = 'lifeos_mock_session'
+const MOCK_AUTH_KEY = 'zelo_mock_session'
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
         user_metadata: { full_name: fullName },
         email_confirmed_at: null
       }
-      localStorage.setItem('lifeos_pending_user', JSON.stringify({ mockUser, password }))
+      localStorage.setItem('zelo_pending_user', JSON.stringify({ mockUser, password }))
       setPendingVerificationEmail(email)
       return { user: mockUser }
     }
@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }) => {
       if (!token || token.length !== 6) {
         throw new Error('Please enter a valid 6-digit OTP code')
       }
-      const rawPending = localStorage.getItem('lifeos_pending_user')
+      const rawPending = localStorage.getItem('zelo_pending_user')
       if (!rawPending) {
         throw new Error('No pending registration found for email ' + email)
       }
@@ -134,12 +134,12 @@ export const AuthProvider = ({ children }) => {
       
       // Save profile
       await updateUserProfile(mockUser.id, {
-        full_name: mockUser.user_metadata.full_name || 'LifeOS User',
+        full_name: mockUser.user_metadata.full_name || 'ZELO User',
         onboarding_completed: false
       })
 
       localStorage.setItem(MOCK_AUTH_KEY, JSON.stringify(mockUser))
-      localStorage.removeItem('lifeos_pending_user')
+      localStorage.removeItem('zelo_pending_user')
       setUser(mockUser)
       await loadUserData(mockUser.id)
       setPendingVerificationEmail(null)

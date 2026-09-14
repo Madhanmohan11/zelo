@@ -125,7 +125,7 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
   ]
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Quick Add to LifeOS">
+    <Modal isOpen={isOpen} onClose={onClose} title="Quick Add to ZELO">
       {/* Selector Tabs */}
       <div className="grid grid-cols-4 gap-2 mb-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/60">
         {types.map((t) => {

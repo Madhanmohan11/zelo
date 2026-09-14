@@ -28,10 +28,10 @@ export const SettingsPage = () => {
       const permission = await Notification.requestPermission()
       setNotificationPermission(permission)
       if (permission === 'granted') {
-        showToast('Notifications enabled for LifeOS reminders!', 'success')
-        new Notification('LifeOS', {
+        showToast('Notifications enabled for ZELO reminders!', 'success')
+        new Notification('ZELO', {
           body: 'Reminders and food/workout alerts will appear here.',
-          icon: '/favicon.ico'
+          icon: '/fav.png'
         })
       } else if (permission === 'denied') {
         showToast('Notification permission denied in browser settings', 'error')
@@ -46,18 +46,18 @@ export const SettingsPage = () => {
       const exportObject = {}
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key && key.startsWith('lifeos_')) {
+        if (key && key.startsWith('zelo_')) {
           exportObject[key] = localStorage.getItem(key)
         }
       }
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2))
       const downloadAnchor = document.createElement('a')
       downloadAnchor.setAttribute('href', dataStr)
-      downloadAnchor.setAttribute('download', `lifeos_backup_${new Date().toISOString().split('T')[0]}.json`)
+      downloadAnchor.setAttribute('download', `zelo_backup_${new Date().toISOString().split('T')[0]}.json`)
       document.body.appendChild(downloadAnchor)
       downloadAnchor.click()
       downloadAnchor.remove()
-      showToast('LifeOS data exported successfully!', 'success')
+      showToast('ZELO data exported successfully!', 'success')
     } catch (e) {
       showToast('Failed to export data', 'error')
     }
@@ -147,7 +147,7 @@ export const SettingsPage = () => {
           </div>
           <div>
             <h3 className="text-base font-extrabold text-slate-900">Data Backup & Export</h3>
-            <p className="text-xs font-medium text-slate-500">Download a full JSON backup of your LifeOS records.</p>
+            <p className="text-xs font-medium text-slate-500">Download a full JSON backup of your ZELO records.</p>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export const SettingsPage = () => {
           <h3 className="text-base">Account Security</h3>
         </div>
         <Button onClick={logout} variant="danger" icon={LogOut} size="sm">
-          Log Out of LifeOS
+          Log Out of ZELO
         </Button>
       </Card>
     </div>

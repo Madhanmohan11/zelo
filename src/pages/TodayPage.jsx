@@ -72,8 +72,8 @@ export const TodayPage = () => {
     loadDashboardData()
 
     const handleUpdate = () => loadDashboardData()
-    window.addEventListener('lifeos_data_updated', handleUpdate)
-    return () => window.removeEventListener('lifeos_data_updated', handleUpdate)
+    window.addEventListener('zelo_data_updated', handleUpdate)
+    return () => window.removeEventListener('zelo_data_updated', handleUpdate)
   }, [loadDashboardData])
 
   const getGreeting = () => {
@@ -126,7 +126,7 @@ export const TodayPage = () => {
   const userName = profile?.full_name?.split(' ')[0] || user?.user_metadata?.full_name?.split(' ')[0] || 'Friend'
 
   if (loading) {
-    return <LoadingState message="Syncing your LifeOS today dashboard..." />
+    return <LoadingState message="Syncing your ZELO today dashboard..." />
   }
 
   return (

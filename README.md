@@ -1,6 +1,6 @@
-# LifeOS — Personal Life Management Web Application
+# ZELO — Personal Life Management Web Application
 
-LifeOS is a complete, mobile-first personal life-management web application designed to help users manage their daily life — from meal schedules and workout routines to pending remember items (laundry, repair, lent items) and daily expense tracking.
+ZELO is a complete, mobile-first personal life-management web application designed to help users manage their daily life — from meal schedules and workout routines to pending remember items (laundry, repair, lent items) and daily expense tracking.
 
 Built with **React**, **Vite**, **Tailwind CSS**, **React Router**, **Lucide Icons**, and **Supabase (Auth, PostgreSQL, Row Level Security)**.
 
@@ -65,7 +65,7 @@ Built with **React**, **Vite**, **Tailwind CSS**, **React Router**, **Lucide Ico
 ## 📂 Project Structure
 
 ```text
-LifeOS/
+ZELO/
 ├── public/
 ├── src/
 │   ├── components/
@@ -116,7 +116,7 @@ LifeOS/
 
 ### 2. Clone and Install Dependencies
 ```bash
-cd LifeOS
+cd ZELO
 npm install
 ```
 
@@ -124,7 +124,7 @@ npm install
 
 1. Create a free project at [Supabase Dashboard](https://app.supabase.com).
 2. Open the **SQL Editor** in your Supabase project dashboard.
-3. Copy the contents of [`supabase_setup.sql`](file:///d:/Business/LifeOS/supabase_setup.sql) and paste them into the SQL Editor.
+3. Copy the contents of [`supabase_setup.sql`](file:///d:/Business/ZELO/supabase_setup.sql) and paste them into the SQL Editor.
 4. Click **Run** to execute the script. This creates:
    - Tables: `profiles`, `user_settings`, `meals`, `workouts`, `workout_exercises`, `remember_items`, `expenses`, `reminders`.
    - RLS policies enforcing `auth.uid() = user_id`.
@@ -161,10 +161,10 @@ npm run build
 
 ## 📱 Mobile Safari & PWA Usage
 
-LifeOS is built mobile-first. On iPhone Safari:
+ZELO is built mobile-first. On iPhone Safari:
 1. Tap the **Share** icon at the bottom of Safari.
 2. Select **"Add to Home Screen"**.
-3. LifeOS will launch in full standalone web app mode with native safe-area inset padding and touch targets.
+3. ZELO will launch in full standalone web app mode with native safe-area inset padding and touch targets.
 
 ---
 

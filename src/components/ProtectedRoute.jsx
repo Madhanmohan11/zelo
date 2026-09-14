@@ -10,7 +10,7 @@ export const ProtectedRoute = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#090d16] flex items-center justify-center">
-        <LoadingState message="Loading your LifeOS session..." />
+        <LoadingState message="Loading your ZELO session..." />
       </div>
     )
   }

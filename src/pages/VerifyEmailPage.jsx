@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShieldCheck, ArrowRight, RefreshCw, Mail } from 'lucide-react'
+import { ArrowRight, RefreshCw, Mail } from 'lucide-react'
+import zeloLogo from '../assets/Logo.png'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -73,7 +74,7 @@ export const VerifyEmailPage = () => {
     setIsLoading(true)
     try {
       await verifyOtp({ email: emailInput, token })
-      showToast('Email verified successfully! Welcome to LifeOS.', 'success')
+      showToast('Email verified successfully! Welcome to ZELO.', 'success')
       navigate('/onboarding')
     } catch (err) {
       showToast(err.message || 'Invalid or expired OTP code', 'error')
@@ -103,14 +104,12 @@ export const VerifyEmailPage = () => {
     <div className="min-h-screen ambient-bg flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#0F172A] text-white shadow-lg shadow-slate-900/10 mb-4">
-            <ShieldCheck className="w-7 h-7 text-emerald-400" />
-          </div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">Verify Your Email</h1>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-14 w-auto object-contain mb-4" />
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">Verify your email</h1>
           <p className="text-xs font-semibold text-slate-500 mt-2">
             Enter the 6-digit verification code sent to{' '}
-            <span className="font-bold text-slate-800">{emailInput || 'your email'}</span>
+            <span className="font-bold text-slate-800">{emailInput || 'your email'}</span>.
           </p>
         </div>
 

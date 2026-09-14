@@ -13,6 +13,7 @@ import {
   Sparkles,
   CheckSquare
 } from 'lucide-react'
+import zeloLogo from '../assets/Logo.png'
 import { useAuth } from '../context/AuthContext'
 import { QuickAddModal } from '../components/QuickAddModal'
 
@@ -46,7 +47,7 @@ export const AppLayout = () => {
     setIsQuickAddOpen(true)
   }
 
-  const displayName = profile?.full_name || user?.user_metadata?.full_name || 'LifeOS User'
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || 'ZELO User'
   const avatarUrl = profile?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
 
   return (
@@ -54,16 +55,8 @@ export const AppLayout = () => {
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col w-64 bg-white/90 backdrop-blur-md border-r border-slate-200/80 p-6 sticky top-0 h-screen z-30 shrink-0 shadow-sm">
         {/* Brand Logo */}
-        <div className="flex items-center gap-3 px-2 py-2 mb-8">
-          <div className="w-10 h-10 rounded-2xl bg-[#0F172A] flex items-center justify-center text-white shadow-md">
-            <Sparkles className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900">
-              LifeOS
-            </h1>
-            <p className="text-[11px] font-semibold text-slate-500 tracking-tight">Your Life. Organized.</p>
-          </div>
+        <div className="px-2 py-2 mb-8 flex items-center">
+          <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-10 w-auto object-contain max-w-full" />
         </div>
 
         {/* Quick Add Button */}
@@ -141,16 +134,8 @@ export const AppLayout = () => {
 
       {/* MOBILE HEADER */}
       <header className="md:hidden flex items-center justify-between px-5 py-3.5 bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 pt-safe shadow-xs">
-        <NavLink to="/today" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#0F172A] flex items-center justify-center text-white shadow-sm">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div>
-            <span className="text-lg font-black text-slate-900 leading-none block">
-              LifeOS
-            </span>
-            <span className="text-[9px] font-semibold text-slate-400 tracking-tight leading-none">Your Life. Organized.</span>
-          </div>
+        <NavLink to="/today" className="flex items-center">
+          <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-8 w-auto object-contain max-w-[150px]" />
         </NavLink>
 
         <div className="flex items-center gap-2">
@@ -206,7 +191,7 @@ export const AppLayout = () => {
         onClose={() => setIsQuickAddOpen(false)}
         defaultTab={quickAddTab}
         onSuccess={() => {
-          window.dispatchEvent(new Event('lifeos_data_updated'))
+          window.dispatchEvent(new Event('zelo_data_updated'))
         }}
       />
     </div>

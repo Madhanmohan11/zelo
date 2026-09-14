@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Sparkles, Mail, Lock, User, ArrowRight } from 'lucide-react'
+import { User, Mail, Lock, ArrowRight } from 'lucide-react'
+import zeloLogo from '../assets/Logo.png'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
@@ -49,12 +50,10 @@ export const RegisterPage = () => {
     <div className="min-h-screen ambient-bg flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header Branding */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#0F172A] text-white shadow-lg shadow-slate-900/10 mb-4">
-            <Sparkles className="w-7 h-7 text-emerald-400" />
-          </div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">Join LifeOS</h1>
-          <p className="text-sm font-semibold text-slate-500 mt-1">Your Life. Organized.</p>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-14 w-auto object-contain mb-4" />
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">Create your account</h1>
+          <p className="text-sm font-semibold text-slate-500 mt-1">Your day. Your way.</p>
         </div>
 
         {/* Card Form */}

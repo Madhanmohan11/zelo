@@ -1,4 +1,4 @@
--- LifeOS Supabase PostgreSQL Database Schema & RLS Setup
+-- ZELO Supabase PostgreSQL Database Schema & RLS Setup
 -- Copy and run this script in the Supabase SQL Editor (https://app.supabase.com -> Project -> SQL Editor)
 
 -- Enable UUID extension if not already enabled

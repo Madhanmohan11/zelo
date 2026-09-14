@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 // Helper for LocalStorage fallback persistence
 const getLocalData = (key, defaultVal = []) => {
   try {
-    const raw = localStorage.getItem(`lifeos_${key}`)
+    const raw = localStorage.getItem(`zelo_${key}`)
     return raw ? JSON.parse(raw) : defaultVal
   } catch (e) {
     console.error('LocalStorage read error:', e)
@@ -13,7 +13,7 @@ const getLocalData = (key, defaultVal = []) => {
 
 const setLocalData = (key, data) => {
   try {
-    localStorage.setItem(`lifeos_${key}`, JSON.stringify(data))
+    localStorage.setItem(`zelo_${key}`, JSON.stringify(data))
   } catch (e) {
     console.error('LocalStorage write error:', e)
   }

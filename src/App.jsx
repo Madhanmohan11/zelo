@@ -26,7 +26,7 @@ const HomeRedirect = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#090d16] flex items-center justify-center">
-        <LoadingState message="Redirecting to your LifeOS portal..." />
+        <LoadingState message="Redirecting to your ZELO portal..." />
       </div>
     )
   }
