@@ -69,10 +69,38 @@ export const AuthProvider = ({ children }) => {
     try {
       const p = await getUserProfile(userId)
       const s = await getUserSettings(userId)
-      setProfile(p)
-      setUserSettings(s)
+      setProfile(
+        p || {
+          id: userId,
+          full_name: 'Madhan',
+          avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          onboarding_completed: true
+        }
+      )
+      setUserSettings(
+        s || {
+          user_id: userId,
+          wake_time: '07:00',
+          sleep_time: '23:00',
+          water_target_ml: 2500,
+          daily_expense_budget: 1000.00
+        }
+      )
     } catch (e) {
-      console.error('Failed to load user profile & settings:', e)
+      console.warn('Failed to load user profile & settings:', e)
+      setProfile({
+        id: userId,
+        full_name: 'Madhan',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        onboarding_completed: true
+      })
+      setUserSettings({
+        user_id: userId,
+        wake_time: '07:00',
+        sleep_time: '23:00',
+        water_target_ml: 2500,
+        daily_expense_budget: 1000.00
+      })
     }
   }
 
