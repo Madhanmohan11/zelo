@@ -1,7 +1,7 @@
 -- =============================================================================
 -- ZELO COMPLETE POSTGRESQL DATABASE SCHEMA & SECURITY MIGRATION
--- Copy and execute this entire script in Supabase SQL Editor:
--- https://supabase.com/dashboard/project/_/sql
+-- Migration Version: 20260914000000_zelo_complete_schema.sql
+-- Description: Complete Production Schema for ZELO Personal Tracker & Admin System
 -- =============================================================================
 
 -- Enable required extensions
