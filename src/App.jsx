@@ -9,7 +9,6 @@ import { AppLayout } from './layouts/AppLayout'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
-import { OnboardingPage } from './pages/OnboardingPage'
 
 import { TodayPage } from './pages/TodayPage'
 import { FoodPage } from './pages/FoodPage'
@@ -33,7 +32,7 @@ import { AdminSettingsPage } from './pages/admin/AdminSettingsPage'
 import { AdminProfilePage } from './pages/admin/AdminProfilePage'
 
 const HomeRedirect = () => {
-  const { user, profile, loading } = useAuth()
+  const { user, loading } = useAuth()
 
   if (loading) {
     return (
@@ -45,10 +44,6 @@ const HomeRedirect = () => {
 
   if (!user) {
     return <Navigate to="/login" replace />
-  }
-
-  if (profile && !profile.onboarding_completed) {
-    return <Navigate to="/onboarding" replace />
   }
 
   return <Navigate to="/today" replace />
@@ -86,16 +81,6 @@ export function App() {
                 <PublicRoute>
                   <VerifyEmailPage />
                 </PublicRoute>
-              }
-            />
-
-            {/* Onboarding Flow */}
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute>
-                  <OnboardingPage />
-                </ProtectedRoute>
               }
             />
 

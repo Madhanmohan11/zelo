@@ -9,6 +9,7 @@ export const Input = forwardRef(({
   helperText,
   className = '',
   id,
+  rightElement,
   ...props
 }, ref) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -35,7 +36,7 @@ export const Input = forwardRef(({
           type={actualType}
           className={`w-full bg-white border rounded-2xl py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all ${
             Icon ? 'pl-11' : 'px-4'
-          } ${isPassword ? 'pr-11' : 'pr-4'} ${
+          } ${isPassword || rightElement ? 'pr-11' : 'pr-4'} ${
             error
               ? 'border-rose-400 focus:ring-rose-400/20'
               : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm'
@@ -51,6 +52,9 @@ export const Input = forwardRef(({
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
+        )}
+        {rightElement && !isPassword && (
+          <div className="absolute right-3.5 z-10">{rightElement}</div>
         )}
       </div>
       {error && <span className="text-xs text-rose-500 font-semibold">{error}</span>}

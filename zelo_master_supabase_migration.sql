@@ -71,9 +71,12 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
   water_target_ml INTEGER DEFAULT 2500,
   daily_expense_budget NUMERIC(10,2) DEFAULT 1000.00,
   notifications_enabled BOOLEAN DEFAULT FALSE,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.user_settings ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;
 
 ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
 

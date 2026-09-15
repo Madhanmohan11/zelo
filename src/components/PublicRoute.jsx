@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { LoadingState } from './ui/LoadingState'
 
 export const PublicRoute = ({ children }) => {
-  const { user, profile, loading } = useAuth()
+  const { user, loading } = useAuth()
 
   if (loading) {
     return (
@@ -15,9 +15,6 @@ export const PublicRoute = ({ children }) => {
   }
 
   if (user) {
-    if (profile && !profile.onboarding_completed) {
-      return <Navigate to="/onboarding" replace />
-    }
     return <Navigate to="/today" replace />
   }
 

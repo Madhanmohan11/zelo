@@ -238,26 +238,6 @@ export const AuthProvider = ({ children }) => {
     setUserSettings(null)
   }
 
-  // Save Onboarding Data
-  const saveOnboarding = async (onboardingData) => {
-    if (!user) return
-    const { wake_time, sleep_time, water_target_ml, daily_expense_budget } = onboardingData
-
-    await updateUserSettings(user.id, {
-      wake_time: wake_time || '07:00',
-      sleep_time: sleep_time || '23:00',
-      water_target_ml: water_target_ml ? parseInt(water_target_ml) : 2500,
-      daily_expense_budget: daily_expense_budget ? parseFloat(daily_expense_budget) : 1000.00
-    })
-
-    const updatedProfile = await updateUserProfile(user.id, {
-      onboarding_completed: true
-    })
-
-    setProfile(updatedProfile)
-    return updatedProfile
-  }
-
   return (
     <AuthContext.Provider
       value={{
@@ -273,7 +253,6 @@ export const AuthProvider = ({ children }) => {
         resendOtp,
         login,
         logout,
-        saveOnboarding,
         loadUserData
       }}
     >

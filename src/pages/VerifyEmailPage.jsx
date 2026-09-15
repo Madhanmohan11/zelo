@@ -75,7 +75,7 @@ export const VerifyEmailPage = () => {
     try {
       await verifyOtp({ email: emailInput, token })
       showToast('Email verified successfully! Welcome to ZELO.', 'success')
-      navigate('/onboarding')
+      navigate('/today')
     } catch (err) {
       showToast(err.message || 'Invalid or expired OTP code', 'error')
     } finally {
