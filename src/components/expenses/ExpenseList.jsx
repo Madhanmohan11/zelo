@@ -10,7 +10,7 @@ import {
   CreditCard,
   Edit2,
   Trash2,
-  DollarSign,
+  IndianRupee,
   Wallet,
   Building2,
   Smartphone
@@ -24,7 +24,7 @@ const getCategoryIcon = (category) => {
   switch (category) {
     case 'Food':
       return Utensils
-    case 'Travel':
+    case 'Transport':
       return Car
     case 'Shopping':
       return ShoppingBag
@@ -58,10 +58,23 @@ export const ExpenseList = ({
   expenses = [],
   accounts = [],
   loading = false,
-  onEdit,
-  onDelete,
-  onAddExpenseClick
+  onAddExpenseClick,
+  onEditExpense,
+  onDeleteExpense,
+  categoryFilter = 'all',
+  onCategoryFilterChange
 }) => {
+  const accountMap = accounts.reduce((acc, a) => {
+    acc[a.id] = a
+    return acc
+  }, {})
+
+  const categories = ['all', 'Food', 'Transport', 'Shopping', 'Bills', 'Health', 'Entertainment', 'Education', 'Other']
+
+  const filteredExpenses = categoryFilter === 'all'
+    ? expenses
+    : expenses.filter((e) => e.category === categoryFilter)
+
   if (loading) {
     return <LoadingState message="Fetching expenses history..." />
   }
@@ -69,7 +82,7 @@ export const ExpenseList = ({
   if (expenses.length === 0) {
     return (
       <EmptyState
-        icon={DollarSign}
+        icon={IndianRupee}
         title="No expenses logged"
         description="Add your first expense to start tracking your daily spending and account balances."
         actionLabel="Log Expense"
@@ -78,8 +91,7 @@ export const ExpenseList = ({
     )
   }
 
-  // Create lookup for accounts
-  const accountMap = new Map(accounts.map((a) => [a.id, a]))
+
 
   const formatExpenseDate = (spentAt) => {
     if (!spentAt) return ''

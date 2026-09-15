@@ -1,5 +1,5 @@
 import React from 'react'
-import { CheckCircle2, Utensils, Dumbbell, Bookmark, DollarSign, Sparkles } from 'lucide-react'
+import { CheckCircle2, Utensils, Dumbbell, Bookmark, IndianRupee, Sparkles } from 'lucide-react'
 import { formatINR } from '../../utils/formatters'
 
 export const DailyProgress = ({ meals = [], workouts = [], remembers = [], expenses = [], spentTotal = 0 }) => {
@@ -104,7 +104,7 @@ export const DailyProgress = ({ meals = [], workouts = [], remembers = [], expen
         {/* Spent Chip */}
         <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <DollarSign className="w-4 h-4 text-emerald-700 shrink-0" />
+            <IndianRupee className="w-4 h-4 text-emerald-700 shrink-0" />
             <div className="truncate">
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Expenses</div>
               <div className="text-xs font-black text-slate-900 truncate">

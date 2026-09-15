@@ -1,5 +1,5 @@
 import React from 'react'
-import { DollarSign, ArrowRight, TrendingUp } from 'lucide-react'
+import { IndianRupee, ArrowRight, TrendingUp } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { formatINR } from '../../utils/formatters'
 
@@ -25,7 +25,7 @@ export const ExpenseSnapshot = ({ expenses = [], spentTotal = 0, budget = 1000 }
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-            <DollarSign className="w-4 h-4" />
+            <IndianRupee className="w-4 h-4" />
           </div>
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Spending Today</h3>
         </div>

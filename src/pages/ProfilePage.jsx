@@ -1,254 +1,255 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { User, Sliders, Bell, Palette, HelpCircle, Shield, LogOut, ChevronRight } from 'lucide-react'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  User,
+  Sliders,
+  Bell,
+  Palette,
+  Download,
+  Lock,
+  LogOut,
+  Trash2,
+  ChevronRight,
+  ShieldCheck
+} from 'lucide-react'
 import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { Button } from '../components/ui/Button'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { updateUserProfile, updateUserSettings } from '../services/dataService'
-import { uploadAvatar, removeAvatar } from '../services/avatarService'
 
 export const ProfilePage = () => {
-  const { user, profile, userSettings, loadUserData, logout } = useAuth()
+  const navigate = useNavigate()
+  const { user, profile, logout } = useAuth()
   const { showToast } = useToast()
 
-  const [fullName, setFullName] = useState(profile?.full_name || '')
-  const [wakeTime, setWakeTime] = useState(userSettings?.wake_time || '07:00')
-  const [sleepTime, setSleepTime] = useState(userSettings?.sleep_time || '23:00')
-  const [waterTarget, setWaterTarget] = useState(userSettings?.water_target_ml || 2500)
-  const [expenseBudget, setExpenseBudget] = useState(userSettings?.daily_expense_budget || 1000)
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [isRemoving, setIsRemoving] = useState(false)
+  const fullName = profile?.full_name || user?.user_metadata?.full_name || 'ZELO Member'
+  const userEmail = user?.email || 'authenticated@zelo.app'
 
-  // Native device file picker ref
-  const fileInputRef = useRef(null)
-
-  useEffect(() => {
-    if (profile) {
-      setFullName(profile.full_name || '')
-    }
-    if (userSettings) {
-      setWakeTime(userSettings.wake_time || '07:00')
-      setSleepTime(userSettings.sleep_time || '23:00')
-      setWaterTarget(userSettings.water_target_ml || 2500)
-      setExpenseBudget(userSettings.daily_expense_budget || 1000)
-    }
-  }, [profile, userSettings])
-
-  // Native device file picker change handler
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
-
-    setIsUploading(true)
+  const handleExportData = () => {
     try {
-      await uploadAvatar(file, user.id)
-      await loadUserData(user.id)
-      showToast('Profile photo updated successfully!', 'success')
-    } catch (err) {
-      console.error('Avatar upload error:', err)
-      showToast(err.message || 'Unable to upload photo. Please try again.', 'error')
-    } finally {
-      setIsUploading(false)
-      // Reset input value so same file can be selected again if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+      const exportObject = {}
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('zelo_')) {
+          exportObject[key] = localStorage.getItem(key)
+        }
       }
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2))
+      const downloadAnchor = document.createElement('a')
+      downloadAnchor.setAttribute('href', dataStr)
+      downloadAnchor.setAttribute('download', `zelo_backup_${new Date().toISOString().split('T')[0]}.json`)
+      document.body.appendChild(downloadAnchor)
+      downloadAnchor.click()
+      downloadAnchor.remove()
+      showToast('ZELO JSON data exported successfully!', 'success')
+    } catch (e) {
+      showToast('Failed to export data', 'error')
     }
   }
 
-  // Handle avatar removal
-  const handleRemovePhoto = async () => {
-    if (!user || !profile?.avatar_url) return
-
-    if (!window.confirm('Remove your profile photo?')) return
-
-    setIsRemoving(true)
-    try {
-      await removeAvatar(user.id, profile.avatar_url)
-      await loadUserData(user.id)
-      showToast('Profile photo removed.', 'info')
-    } catch (err) {
-      console.error('Avatar remove error:', err)
-      showToast('Unable to remove photo. Please try again.', 'error')
-    } finally {
-      setIsRemoving(false)
+  const settingsModules = [
+    {
+      title: 'Personal Info',
+      subtitle: 'Name, contact & profile photo',
+      icon: User,
+      path: '/profile/personal',
+      color: 'bg-emerald-100 text-emerald-800'
+    },
+    {
+      title: 'Daily Settings',
+      subtitle: 'Schedule, water target & expense budget',
+      icon: Sliders,
+      path: '/profile/daily-settings',
+      color: 'bg-blue-100 text-blue-800'
+    },
+    {
+      title: 'Notification Settings',
+      subtitle: 'Reminders & alert preferences',
+      icon: Bell,
+      path: '/profile/notifications',
+      color: 'bg-purple-100 text-purple-800'
+    },
+    {
+      title: 'Appearance',
+      subtitle: 'System, Light, and Dark themes',
+      icon: Palette,
+      path: '/profile/appearance',
+      color: 'bg-amber-100 text-amber-800'
+    },
+    {
+      title: 'Data Backup & Export',
+      subtitle: 'Download full JSON backup of your ZELO records',
+      icon: Download,
+      onClick: handleExportData,
+      color: 'bg-indigo-100 text-indigo-800'
     }
-  }
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault()
-    if (!user) return
-
-    setIsSubmitting(true)
-    try {
-      await updateUserProfile(user.id, {
-        full_name: fullName
-      })
-
-      await updateUserSettings(user.id, {
-        wake_time: wakeTime,
-        sleep_time: sleepTime,
-        water_target_ml: parseInt(waterTarget) || 2500,
-        daily_expense_budget: parseFloat(expenseBudget) || 1000
-      })
-
-      await loadUserData(user.id)
-      showToast('Profile preferences updated!', 'success')
-      setIsModalOpen(false)
-    } catch (err) {
-      showToast(err.message || 'Failed to update profile', 'error')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const menuSections = [
-    { title: 'Personal Info', icon: User, onClick: () => setIsModalOpen(true) },
-    { title: 'Daily Settings', icon: Sliders, onClick: () => setIsModalOpen(true) },
-    { title: 'Notification Settings', icon: Bell, onClick: () => showToast('Notifications configured in browser', 'info') },
-    { title: 'Appearance', icon: Palette, onClick: () => showToast('Appearance set to Soft Light theme', 'info') },
-    { title: 'Help & Support', icon: HelpCircle, onClick: () => showToast('ZELO Support: support@zelo.app', 'info') },
-    { title: 'Privacy', icon: Shield, onClick: () => showToast('Privacy Policy & RLS Active', 'info') },
   ]
 
-  const hasPhoto = Boolean(profile?.avatar_url)
+  const securityModules = [
+    {
+      title: 'Change Password',
+      subtitle: 'Update account authentication password',
+      icon: Lock,
+      path: '/profile/security',
+      color: 'bg-slate-100 text-slate-800'
+    },
+    {
+      title: 'Logout',
+      subtitle: 'Sign out of current active session',
+      icon: LogOut,
+      onClick: () => setIsLogoutModalOpen(true),
+      color: 'bg-rose-50 text-rose-600',
+      textColor: 'text-rose-600'
+    },
+    {
+      title: 'Delete Account',
+      subtitle: 'Permanent account deletion request',
+      icon: Trash2,
+      path: '/profile/security',
+      color: 'bg-rose-100 text-rose-700',
+      textColor: 'text-rose-700'
+    }
+  ]
+
+  const handleConfirmLogout = async () => {
+    setIsLogoutModalOpen(false)
+    try {
+      await logout()
+      showToast('Logged out successfully', 'info')
+      navigate('/login')
+    } catch (err) {
+      showToast('Error signing out', 'error')
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Hidden Native File Input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept="image/jpeg,image/png,image/webp"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-
-      {/* Header */}
+      {/* Page Title Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Profile</h1>
+        <p className="text-xs font-semibold text-slate-500 mt-0.5">Manage your account preferences and daily settings</p>
       </div>
 
-      {/* Avatar & User Header Card */}
-      <Card className="bg-white border border-slate-200/70 p-6 rounded-3xl flex flex-col items-center text-center shadow-xs">
+      {/* Primary User Profile Header Card */}
+      <Card className="bg-white border border-slate-200/70 p-6 rounded-3xl flex flex-col items-center text-center shadow-xs relative overflow-hidden">
         <div className="mb-3">
           <ProfileAvatar
             size="lg"
             editable={true}
             showRemove={true}
-            onAvatarUpdated={() => {
-              if (user) loadUserData(user.id)
-            }}
           />
         </div>
 
-        <h2 className="text-xl font-black text-slate-900 mt-1">{fullName || 'Madhan'}</h2>
-        <p className="text-xs font-semibold text-slate-500 mt-0.5">{user?.email || 'madhan@example.com'}</p>
+        <h2 className="text-xl font-black text-slate-900 mt-1 tracking-tight">{fullName}</h2>
+        <p className="text-xs font-semibold text-slate-500 mt-0.5 flex items-center gap-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 inline" />
+          {userEmail}
+        </p>
       </Card>
 
-      {/* Settings Navigation List */}
-      <div className="space-y-2">
-        {menuSections.map((item) => {
-          const Icon = item.icon
-          return (
-            <Card
-              key={item.title}
-              onClick={item.onClick}
-              className="bg-white border border-slate-200/70 p-4 rounded-3xl flex items-center justify-between shadow-xs hover:border-slate-300 transition-all cursor-pointer"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="p-2 rounded-xl bg-slate-100 text-slate-700">
-                  <Icon className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-extrabold text-slate-900">{item.title}</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </Card>
-          )
-        })}
+      {/* Main Profile Settings Navigation List */}
+      <div className="space-y-2.5">
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 px-1">
+          General Preferences
+        </h3>
 
-        {/* Logout Option */}
-        <Card
-          onClick={logout}
-          className="bg-white border border-slate-200/70 p-4 rounded-3xl flex items-center justify-between shadow-xs hover:border-rose-200 transition-all cursor-pointer"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
-              <LogOut className="w-4 h-4" />
-            </div>
-            <span className="text-sm font-extrabold text-rose-600">Logout</span>
-          </div>
-          <ChevronRight className="w-4 h-4 text-rose-300" />
-        </Card>
+        <div className="space-y-2">
+          {settingsModules.map((item) => {
+            const Icon = item.icon
+            return (
+              <Card
+                key={item.title}
+                onClick={() => {
+                  if (item.onClick) item.onClick()
+                  else if (item.path) navigate(item.path)
+                }}
+                className="bg-white border border-slate-200/70 p-4 rounded-3xl flex items-center justify-between shadow-xs hover:border-slate-300 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className={`p-2.5 rounded-2xl ${item.color} font-bold`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                      {item.title}
+                    </h4>
+                    <p className="text-[11px] font-medium text-slate-500">{item.subtitle}</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </Card>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Edit Profile Modal */}
+      {/* Account & Security Section */}
+      <div className="space-y-2.5 pt-2">
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 px-1">
+          Account & Security
+        </h3>
+
+        <div className="space-y-2">
+          {securityModules.map((item) => {
+            const Icon = item.icon
+            return (
+              <Card
+                key={item.title}
+                onClick={() => {
+                  if (item.onClick) item.onClick()
+                  else if (item.path) navigate(item.path)
+                }}
+                className="bg-white border border-slate-200/70 p-4 rounded-3xl flex items-center justify-between shadow-xs hover:border-slate-300 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className={`p-2.5 rounded-2xl ${item.color} font-bold`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className={`text-sm font-extrabold ${item.textColor || 'text-slate-900'}`}>
+                      {item.title}
+                    </h4>
+                    <p className="text-[11px] font-medium text-slate-500">{item.subtitle}</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Logout Modal Confirmation */}
       <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Edit Profile & Preferences"
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        title="Confirm Logout"
       >
-        <form onSubmit={handleSaveProfile} className="space-y-4">
-          <div className="flex justify-center pb-2">
-            <ProfileAvatar
-              size="md"
-              editable={true}
-              showRemove={true}
-              onAvatarUpdated={() => {
-                if (user) loadUserData(user.id)
-              }}
-            />
-          </div>
-
-          <Input
-            label="Full Name"
-            icon={User}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Wake Time"
-              type="time"
-              value={wakeTime}
-              onChange={(e) => setWakeTime(e.target.value)}
-            />
-            <Input
-              label="Sleep Time"
-              type="time"
-              value={sleepTime}
-              onChange={(e) => setSleepTime(e.target.value)}
-            />
-          </div>
-
-          <Input
-            label="Daily Water Target (ml)"
-            type="number"
-            value={waterTarget}
-            onChange={(e) => setWaterTarget(e.target.value)}
-          />
-
-          <Input
-            label="Daily Expense Budget (₹)"
-            type="number"
-            value={expenseBudget}
-            onChange={(e) => setExpenseBudget(e.target.value)}
-          />
-
-          <div className="pt-2">
-            <Button type="submit" variant="primary" fullWidth isLoading={isSubmitting}>
-              Save Profile
+        <div className="space-y-4 pt-1">
+          <p className="text-sm font-medium text-slate-600">
+            Are you sure you want to sign out of ZELO?
+          </p>
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsLogoutModalOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmLogout}
+              className="flex-1"
+            >
+              Sign Out
             </Button>
           </div>
-        </form>
+        </div>
       </Modal>
     </div>
   )

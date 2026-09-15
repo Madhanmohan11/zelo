@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { DollarSign, Plus } from 'lucide-react'
+import { IndianRupee, Plus } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -328,7 +328,7 @@ export const ExpensesPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-emerald-600" />
+            <IndianRupee className="w-6 h-6 text-emerald-600" />
             <span>Expense Manager</span>
           </h1>
           <p className="text-xs font-semibold text-slate-500 mt-0.5">

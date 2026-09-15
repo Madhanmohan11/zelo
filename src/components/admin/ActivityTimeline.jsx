@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Dumbbell, Utensils, DollarSign, Bell } from 'lucide-react';
+import { Activity, Dumbbell, Utensils, IndianRupee, Bell } from 'lucide-react';
 
 export function ActivityTimeline({ activities = [] }) {
   const getIcon = (type) => {
@@ -9,7 +9,7 @@ export function ActivityTimeline({ activities = [] }) {
       case 'food':
         return <Utensils className="w-3.5 h-3.5 text-teal-600" />;
       case 'expense':
-        return <DollarSign className="w-3.5 h-3.5 text-amber-600" />;
+        return <IndianRupee className="w-3.5 h-3.5 text-amber-600" />;
       case 'remember':
         return <Bell className="w-3.5 h-3.5 text-purple-600" />;
       default:
