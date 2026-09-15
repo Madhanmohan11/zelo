@@ -25,7 +25,7 @@ export const AppLayout = () => {
   const [quickAddTab, setQuickAddTab] = useState(null)
 
   const navItemsLeft = [
-    { path: '/today', ariaLabel: 'Home', title: 'Home', icon: Sun },
+    { path: '/workout', ariaLabel: 'Workout', title: 'Workout', icon: Dumbbell },
     { path: '/food', ariaLabel: 'Food', title: 'Food', icon: Utensils },
   ]
 
