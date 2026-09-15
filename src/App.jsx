@@ -100,6 +100,7 @@ export function App() {
               <Route path="/workout" element={<WorkoutPage />} />
               <Route path="/remember" element={<RememberPage />} />
               <Route path="/expenses" element={<ExpensesPage />} />
+              <Route path="/expenses/savings" element={<ExpensesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

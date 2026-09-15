@@ -7,6 +7,7 @@ import { Utensils, Dumbbell, Bookmark, DollarSign } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { createMeal, createWorkout, createRememberItem, createExpense } from '../services/dataService'
+import { getAccounts } from '../services/accountService'
 import { formatINR } from '../utils/formatters'
 
 export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = () => {} }) => {
@@ -14,6 +15,10 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
   const { showToast } = useToast()
   const [activeType, setActiveType] = useState('expense') // 'food', 'workout', 'remember', 'expense'
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Accounts state
+  const [accounts, setAccounts] = useState([])
+  const [accountId, setAccountId] = useState('')
 
   // Quick inputs
   const [amount, setAmount] = useState('')
@@ -42,12 +47,20 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
   }, [defaultTab])
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && user) {
+      getAccounts(user.id)
+        .then((accs) => {
+          const active = accs.filter((a) => a.is_active !== false)
+          setAccounts(active)
+          if (active.length > 0) setAccountId(active[0].id)
+        })
+        .catch(() => {})
+
       setTimeout(() => {
         focusInputRef.current?.focus()
       }, 100)
     }
-  }, [isOpen, activeType])
+  }, [isOpen, activeType, user])
 
   const resetForm = () => {
     setAmount('')
@@ -72,6 +85,7 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
         await createExpense(user.id, {
           amount,
           category,
+          account_id: accountId || null,
           payment_method: paymentMethod,
           description: expenseDesc || `${category} expense`
         })
@@ -180,16 +194,19 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
                 ]}
               />
               <Select
-                label="Payment Method"
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                options={[
-                  { value: 'UPI', label: 'UPI / GPay' },
-                  { value: 'Cash', label: 'Cash' },
-                  { value: 'Card', label: 'Debit / Credit Card' },
-                  { value: 'Bank Transfer', label: 'Bank Transfer' },
-                  { value: 'Other', label: 'Other' }
-                ]}
+                label="Payment Account"
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                options={
+                  accounts.length > 0
+                    ? accounts.map((acc) => ({
+                        value: acc.id,
+                        label: `${acc.name} (${formatINR(acc.current_balance)})`
+                      }))
+                    : [
+                        { value: '', label: 'Cash' }
+                      ]
+                }
               />
             </div>
             <Input

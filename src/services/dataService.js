@@ -332,10 +332,19 @@ export const getExpenses = async (userId) => {
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, accounts(id, name, account_type, icon)')
       .eq('user_id', userId)
       .order('spent_at', { ascending: false })
-    if (error) throw error
+    if (error) {
+      console.warn('Error fetching expenses with account join:', error)
+      // Fallback query without join in case schema is being updated
+      const { data: fallbackData } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', userId)
+        .order('spent_at', { ascending: false })
+      return fallbackData || []
+    }
     return data || []
   }
 
@@ -348,6 +357,7 @@ export const createExpense = async (userId, expenseData) => {
   const newExpense = {
     id: crypto.randomUUID(),
     user_id: userId,
+    account_id: expenseData.account_id || null,
     amount: parseFloat(expenseData.amount),
     category: expenseData.category || 'Food',
     payment_method: expenseData.payment_method || 'UPI',
@@ -359,7 +369,7 @@ export const createExpense = async (userId, expenseData) => {
   }
 
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from('expenses').insert([newExpense]).select().single()
+    const { data, error } = await supabase.from('expenses').insert([newExpense]).select('*, accounts(id, name, account_type, icon)').single()
     if (error) throw error
     return data
   }
@@ -379,7 +389,7 @@ export const updateExpense = async (userId, expenseId, updates) => {
       .update(payload)
       .eq('id', expenseId)
       .eq('user_id', userId)
-      .select()
+      .select('*, accounts(id, name, account_type, icon)')
       .single()
     if (error) throw error
     return data
