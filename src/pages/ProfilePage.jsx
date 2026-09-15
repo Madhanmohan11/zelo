@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react'
-import { User, Mail, Sliders, Bell, Palette, HelpCircle, Shield, LogOut, Camera, ChevronRight, Save } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { User, Mail, Sliders, Bell, Palette, HelpCircle, Shield, LogOut, Camera, Trash2, ChevronRight, Save } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { UserAvatar } from '../components/ui/UserAvatar'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { updateUserProfile, updateUserSettings } from '../services/dataService'
+import { uploadAvatar, removeAvatar } from '../services/avatarService'
 
 export const ProfilePage = () => {
   const { user, profile, userSettings, loadUserData, logout } = useAuth()
   const { showToast } = useToast()
 
   const [fullName, setFullName] = useState(profile?.full_name || '')
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '')
-
   const [wakeTime, setWakeTime] = useState(userSettings?.wake_time || '07:00')
   const [sleepTime, setSleepTime] = useState(userSettings?.sleep_time || '23:00')
   const [waterTarget, setWaterTarget] = useState(userSettings?.water_target_ml || 2500)
@@ -22,11 +22,15 @@ export const ProfilePage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isRemoving, setIsRemoving] = useState(false)
+
+  // Native device file picker ref
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || '')
-      setAvatarUrl(profile.avatar_url || '')
     }
     if (userSettings) {
       setWakeTime(userSettings.wake_time || '07:00')
@@ -36,15 +40,55 @@ export const ProfilePage = () => {
     }
   }, [profile, userSettings])
 
-  const handleSave = async (e) => {
+  // Native device file picker change handler
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    setIsUploading(true)
+    try {
+      await uploadAvatar(file, user.id)
+      await loadUserData(user.id)
+      showToast('Profile photo updated successfully!', 'success')
+    } catch (err) {
+      console.error('Avatar upload error:', err)
+      showToast(err.message || 'Unable to upload photo. Please try again.', 'error')
+    } finally {
+      setIsUploading(false)
+      // Reset input value so same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  // Handle avatar removal
+  const handleRemovePhoto = async () => {
+    if (!user || !profile?.avatar_url) return
+
+    if (!window.confirm('Remove your profile photo?')) return
+
+    setIsRemoving(true)
+    try {
+      await removeAvatar(user.id, profile.avatar_url)
+      await loadUserData(user.id)
+      showToast('Profile photo removed.', 'info')
+    } catch (err) {
+      console.error('Avatar remove error:', err)
+      showToast('Unable to remove photo. Please try again.', 'error')
+    } finally {
+      setIsRemoving(false)
+    }
+  }
+
+  const handleSaveProfile = async (e) => {
     e.preventDefault()
     if (!user) return
 
     setIsSubmitting(true)
     try {
       await updateUserProfile(user.id, {
-        full_name: fullName,
-        avatar_url: avatarUrl
+        full_name: fullName
       })
 
       await updateUserSettings(user.id, {
@@ -55,7 +99,7 @@ export const ProfilePage = () => {
       })
 
       await loadUserData(user.id)
-      showToast('Profile updated successfully!', 'success')
+      showToast('Profile preferences updated!', 'success')
       setIsModalOpen(false)
     } catch (err) {
       showToast(err.message || 'Failed to update profile', 'error')
@@ -73,8 +117,19 @@ export const ProfilePage = () => {
     { title: 'Privacy', icon: Shield, onClick: () => showToast('Privacy Policy & RLS Active', 'info') },
   ]
 
+  const hasPhoto = Boolean(profile?.avatar_url)
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
+      {/* Hidden Native File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Profile</h1>
@@ -83,21 +138,43 @@ export const ProfilePage = () => {
       {/* Avatar & User Header Card */}
       <Card className="bg-white border border-slate-200/70 p-6 rounded-3xl flex flex-col items-center text-center shadow-xs">
         <div className="relative mb-3">
-          <img
-            src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-            alt="Avatar"
-            className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow-md"
+          <UserAvatar
+            avatarPath={profile?.avatar_url}
+            name={profile?.full_name || user?.email}
+            size="xl"
+            editable
+            onEditClick={() => fileInputRef.current?.click()}
+            isLoading={isUploading || isRemoving}
           />
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="absolute bottom-0 right-0 p-2 rounded-full bg-[#0F172A] text-white shadow-md hover:scale-105 transition-all"
-          >
-            <Camera className="w-4 h-4 text-emerald-400" />
-          </button>
         </div>
 
-        <h2 className="text-xl font-black text-slate-900">{fullName || 'Madhan'}</h2>
-        <p className="text-xs font-semibold text-slate-500 mt-0.5">{user?.email || 'madhan@example.com'}</p>
+        <h2 className="text-xl font-black text-slate-900">{profile?.full_name || 'User'}</h2>
+        <p className="text-xs font-semibold text-slate-500 mt-0.5">{user?.email || ''}</p>
+
+        {/* PHOTO ACTION BUTTONS */}
+        <div className="flex items-center gap-2 mt-4">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || isRemoving}
+            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 disabled:opacity-50"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{hasPhoto ? 'Change Photo' : 'Upload Photo'}</span>
+          </button>
+
+          {hasPhoto && (
+            <button
+              type="button"
+              onClick={handleRemovePhoto}
+              disabled={isUploading || isRemoving}
+              className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>Remove Photo</span>
+            </button>
+          )}
+        </div>
       </Card>
 
       {/* Settings Navigation List */}
@@ -142,19 +219,13 @@ export const ProfilePage = () => {
         onClose={() => setIsModalOpen(false)}
         title="Edit Profile & Preferences"
       >
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSaveProfile} className="space-y-4">
           <Input
             label="Full Name"
             icon={User}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
-          />
-
-          <Input
-            label="Avatar Image URL"
-            value={avatarUrl}
-            onChange={(e) => setAvatarUrl(e.target.value)}
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -177,6 +248,13 @@ export const ProfilePage = () => {
             type="number"
             value={waterTarget}
             onChange={(e) => setWaterTarget(e.target.value)}
+          />
+
+          <Input
+            label="Daily Expense Budget (₹)"
+            type="number"
+            value={expenseBudget}
+            onChange={(e) => setExpenseBudget(e.target.value)}
           />
 
           <div className="pt-2">

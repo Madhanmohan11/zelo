@@ -16,6 +16,7 @@ import {
 import zeloLogo from '../assets/Logo.png'
 import { useAuth } from '../context/AuthContext'
 import { QuickAddModal } from '../components/QuickAddModal'
+import { UserAvatar } from '../components/ui/UserAvatar'
 
 export const AppLayout = () => {
   const { profile } = useAuth()
@@ -69,7 +70,7 @@ export const AppLayout = () => {
               <Settings className="w-5 h-5" />
             </NavLink>
             <NavLink to="/profile" title="Profile" aria-label="Profile">
-              <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-xs" />
+              <UserAvatar avatarPath={profile?.avatar_url} name={profile?.full_name} size="sm" />
             </NavLink>
           </div>
         </div>

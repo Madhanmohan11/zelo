@@ -1,7 +1,3 @@
--- =============================================================================
--- ZELO COMPLETE MASTER POSTGRESQL DATABASE MIGRATION & RLS SETUP
--- Copy and run this script in the Supabase SQL Editor (https://app.supabase.com -> Project -> SQL Editor)
--- =============================================================================
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -533,14 +529,14 @@ CREATE POLICY "Users can manage their own AI messages"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, avatar_url, role, onboarding_completed)
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    'user',
-    FALSE
-  )
+ INSERT INTO public.profiles (id, full_name, avatar_url, role, onboarding_completed)
+VALUES (
+  NEW.id,
+  COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+  NULL,
+  'user',
+  FALSE
+)
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.user_settings (user_id)
@@ -603,3 +599,52 @@ CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON public.tasks (user_id, statu
 CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON public.habit_logs (user_id, log_date);
 CREATE INDEX IF NOT EXISTS idx_water_logs_date ON public.water_logs (user_id, logged_date);
 CREATE INDEX IF NOT EXISTS idx_ai_messages_conv ON public.ai_messages (conversation_id, created_at);
+
+-- -----------------------------------------------------------------------------
+-- SUPABASE STORAGE: AVATARS BUCKET & RLS POLICIES
+-- -----------------------------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'avatars',
+  'avatars',
+  FALSE, -- Private bucket (requires signed URLs)
+  5242880, -- 5 MB Limit
+  ARRAY['image/jpeg', 'image/png', 'image/webp']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = FALSE,
+  file_size_limit = 5242880,
+  allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp'];
+
+-- Storage RLS Policies for avatars bucket
+DROP POLICY IF EXISTS "Users can view their own avatar files" ON storage.objects;
+CREATE POLICY "Users can view their own avatar files"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'avatars' AND 
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "Users can upload their own avatar files" ON storage.objects;
+CREATE POLICY "Users can upload their own avatar files"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'avatars' AND 
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "Users can update their own avatar files" ON storage.objects;
+CREATE POLICY "Users can update their own avatar files"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'avatars' AND 
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+DROP POLICY IF EXISTS "Users can delete their own avatar files" ON storage.objects;
+CREATE POLICY "Users can delete their own avatar files"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'avatars' AND 
+    auth.uid()::text = (storage.foldername(name))[1]
+  );

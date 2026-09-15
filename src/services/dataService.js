@@ -435,7 +435,7 @@ export const getUserProfile = async (userId) => {
   return getLocalData(`profile_${userId}`, {
     id: userId,
     full_name: 'Madhan',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    avatar_url: null,
     timezone: 'UTC',
     onboarding_completed: false
   })
