@@ -8,6 +8,7 @@ import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { updateUserProfile, updateUserSettings } from '../services/dataService'
+import { uploadAvatar, removeAvatar } from '../services/avatarService'
 
 export const ProfilePage = () => {
   const { user, profile, userSettings, loadUserData, logout } = useAuth()
@@ -21,6 +22,11 @@ export const ProfilePage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isRemoving, setIsRemoving] = useState(false)
+
+  // Native device file picker ref
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (profile) {
@@ -34,7 +40,48 @@ export const ProfilePage = () => {
     }
   }, [profile, userSettings])
 
-  const handleSave = async (e) => {
+  // Native device file picker change handler
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    setIsUploading(true)
+    try {
+      await uploadAvatar(file, user.id)
+      await loadUserData(user.id)
+      showToast('Profile photo updated successfully!', 'success')
+    } catch (err) {
+      console.error('Avatar upload error:', err)
+      showToast(err.message || 'Unable to upload photo. Please try again.', 'error')
+    } finally {
+      setIsUploading(false)
+      // Reset input value so same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  // Handle avatar removal
+  const handleRemovePhoto = async () => {
+    if (!user || !profile?.avatar_url) return
+
+    if (!window.confirm('Remove your profile photo?')) return
+
+    setIsRemoving(true)
+    try {
+      await removeAvatar(user.id, profile.avatar_url)
+      await loadUserData(user.id)
+      showToast('Profile photo removed.', 'info')
+    } catch (err) {
+      console.error('Avatar remove error:', err)
+      showToast('Unable to remove photo. Please try again.', 'error')
+    } finally {
+      setIsRemoving(false)
+    }
+  }
+
+  const handleSaveProfile = async (e) => {
     e.preventDefault()
     if (!user) return
 
@@ -52,7 +99,7 @@ export const ProfilePage = () => {
       })
 
       await loadUserData(user.id)
-      showToast('Profile updated successfully!', 'success')
+      showToast('Profile preferences updated!', 'success')
       setIsModalOpen(false)
     } catch (err) {
       showToast(err.message || 'Failed to update profile', 'error')
@@ -70,8 +117,19 @@ export const ProfilePage = () => {
     { title: 'Privacy', icon: Shield, onClick: () => showToast('Privacy Policy & RLS Active', 'info') },
   ]
 
+  const hasPhoto = Boolean(profile?.avatar_url)
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
+      {/* Hidden Native File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Profile</h1>
@@ -176,6 +234,13 @@ export const ProfilePage = () => {
             type="number"
             value={waterTarget}
             onChange={(e) => setWaterTarget(e.target.value)}
+          />
+
+          <Input
+            label="Daily Expense Budget (₹)"
+            type="number"
+            value={expenseBudget}
+            onChange={(e) => setExpenseBudget(e.target.value)}
           />
 
           <div className="pt-2">

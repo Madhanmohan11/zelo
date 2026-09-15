@@ -391,6 +391,7 @@ export const createExpense = async (userId, expenseData) => {
   const newExpense = {
     id: crypto.randomUUID(),
     user_id: userId,
+    account_id: expenseData.account_id || null,
     amount: parseFloat(expenseData.amount),
     category: expenseData.category || 'Food',
     payment_method: expenseData.payment_method || 'UPI',
@@ -481,7 +482,7 @@ export const getUserProfile = async (userId) => {
   return getLocalData(`profile_${userId}`, {
     id: userId,
     full_name: 'Madhan',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    avatar_url: null,
     timezone: 'UTC',
     onboarding_completed: true
   })

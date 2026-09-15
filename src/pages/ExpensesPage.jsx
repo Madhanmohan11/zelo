@@ -1,112 +1,145 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { DollarSign, Plus, Search, Trash2, Edit2, CreditCard } from 'lucide-react'
-import { Card } from '../components/ui/Card'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { DollarSign, Plus } from 'lucide-react'
 import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
-import { Select } from '../components/ui/Select'
-import { Badge } from '../components/ui/Badge'
-import { Modal } from '../components/ui/Modal'
-import { EmptyState } from '../components/ui/EmptyState'
-import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+
 import { getExpenses, createExpense, updateExpense, deleteExpense } from '../services/dataService'
+import {
+  getAccounts,
+  createAccount,
+  updateAccount,
+  deactivateAccount,
+  addMoney,
+  transferMoney
+} from '../services/accountService'
 import { formatINR } from '../utils/formatters'
+
+// Sub-components
+import { ExpenseTabs } from '../components/expenses/ExpenseTabs'
+import { ExpenseSummary } from '../components/expenses/ExpenseSummary'
+import { ExpenseFilters } from '../components/expenses/ExpenseFilters'
+import { ExpenseList } from '../components/expenses/ExpenseList'
+import { ExpenseModal } from '../components/expenses/ExpenseModal'
+import { AccountList } from '../components/expenses/AccountList'
+import { AccountModal } from '../components/expenses/AccountModal'
+import { AccountDetailModal } from '../components/expenses/AccountDetailModal'
+import { AddMoneyModal } from '../components/expenses/AddMoneyModal'
+import { TransferMoneyModal } from '../components/expenses/TransferMoneyModal'
+import { MonthlyAnalysis } from '../components/expenses/MonthlyAnalysis'
+import { YearlyAnalysis } from '../components/expenses/YearlyAnalysis'
+import { DeleteExpenseModal } from '../components/expenses/DeleteExpenseModal'
 
 export const ExpensesPage = () => {
   const { user } = useAuth()
   const { showToast } = useToast()
+  const location = useLocation()
+  const navigate = useNavigate()
 
+  // Determine active sub-tab from route
+  const activeTab = location.pathname.includes('/savings') ? 'savings' : 'expenses'
+
+  const handleTabChange = (tab) => {
+    if (tab === 'savings') {
+      navigate('/expenses/savings')
+    } else {
+      navigate('/expenses')
+    }
+  }
+
+  // Data state
   const [expenses, setExpenses] = useState([])
+  const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
-  
-  // Filters & Search
+
+  // Expense filters & search
   const [searchQuery, setSearchQuery] = useState('')
   const [timeFilter, setTimeFilter] = useState('all') // 'all', 'today', 'week', 'month'
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [accountFilter, setAccountFilter] = useState('all')
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  // Analytics view mode
+  const [analyticsMode, setAnalyticsMode] = useState('monthly') // 'monthly', 'yearly'
+
+  // Modals state
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
-  const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState('Food')
-  const [paymentMethod, setPaymentMethod] = useState('UPI')
-  const [description, setDescription] = useState('')
-  const [spentAt, setSpentAt] = useState(new Date().toISOString().slice(0, 16))
-  const [notes, setNotes] = useState('')
+
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
+  const [editingAccount, setEditingAccount] = useState(null)
+
+  const [isAccountDetailModalOpen, setIsAccountDetailModalOpen] = useState(false)
+  const [detailAccount, setDetailAccount] = useState(null)
+
+  const [isAddMoneyModalOpen, setIsAddMoneyModalOpen] = useState(false)
+  const [addMoneyAccountId, setAddMoneyAccountId] = useState(null)
+
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+  const [transferFromAccountId, setTransferFromAccountId] = useState(null)
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletingExpense, setDeletingExpense] = useState(null)
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const loadExpenses = useCallback(async () => {
+  // -----------------------------------------------------------------------------
+  // DATA FETCHING & SYNCHRONIZATION
+  // -----------------------------------------------------------------------------
+  const loadData = useCallback(async () => {
     if (!user) return
     setLoading(true)
     try {
-      const data = await getExpenses(user.id)
-      setExpenses(data)
+      const [fetchedAccounts, fetchedExpenses] = await Promise.all([
+        getAccounts(user.id),
+        getExpenses(user.id)
+      ])
+
+      setAccounts(fetchedAccounts)
+      setExpenses(fetchedExpenses)
     } catch (err) {
-      showToast('Failed to load expenses', 'error')
+      console.error('Data load error:', err)
+      showToast('Failed to load expense and account data', 'error')
     } finally {
       setLoading(false)
     }
   }, [user, showToast])
 
   useEffect(() => {
-    loadExpenses()
-  }, [loadExpenses])
+    loadData()
 
-  const openAddModal = () => {
+    // Global listener for Quick Add modal updates
+    const handleGlobalUpdate = () => loadData()
+    window.addEventListener('zelo_data_updated', handleGlobalUpdate)
+    return () => window.removeEventListener('zelo_data_updated', handleGlobalUpdate)
+  }, [loadData])
+
+  // -----------------------------------------------------------------------------
+  // EXPENSE HANDLERS
+  // -----------------------------------------------------------------------------
+  const handleOpenAddExpense = () => {
     setEditingExpense(null)
-    setAmount('')
-    setCategory('Food')
-    setPaymentMethod('UPI')
-    setDescription('')
-    setSpentAt(new Date().toISOString().slice(0, 16))
-    setNotes('')
-    setIsModalOpen(true)
+    setIsExpenseModalOpen(true)
   }
 
-  const openEditModal = (exp) => {
+  const handleOpenEditExpense = (exp) => {
     setEditingExpense(exp)
-    setAmount(String(exp.amount))
-    setCategory(exp.category)
-    setPaymentMethod(exp.payment_method || 'UPI')
-    setDescription(exp.description || '')
-    setSpentAt(exp.spent_at ? new Date(exp.spent_at).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16))
-    setNotes(exp.notes || '')
-    setIsModalOpen(true)
+    setIsExpenseModalOpen(true)
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
-      showToast('Please enter a valid expense amount', 'error')
-      return
-    }
-
+  const handleSaveExpense = async (expenseData) => {
+    if (!user) return
     setIsSubmitting(true)
     try {
       if (editingExpense) {
-        await updateExpense(user.id, editingExpense.id, {
-          amount,
-          category,
-          payment_method: paymentMethod,
-          description,
-          spent_at: new Date(spentAt).toISOString(),
-          notes
-        })
-        showToast('Expense record updated', 'success')
+        await updateExpense(user.id, editingExpense.id, expenseData)
+        showToast('Expense updated successfully', 'success')
       } else {
-        await createExpense(user.id, {
-          amount,
-          category,
-          payment_method: paymentMethod,
-          description,
-          spent_at: new Date(spentAt).toISOString(),
-          notes
-        })
-        showToast(`Logged expense ${formatINR(amount)}`, 'success')
+        await createExpense(user.id, expenseData)
+        showToast(`Logged expense ${formatINR(expenseData.amount)}`, 'success')
       }
-      setIsModalOpen(false)
-      loadExpenses()
+      setIsExpenseModalOpen(false)
+      await loadData()
     } catch (err) {
       showToast(err.message || 'Failed to save expense', 'error')
     } finally {
@@ -114,21 +147,136 @@ export const ExpensesPage = () => {
     }
   }
 
-  const handleDelete = async (expenseId) => {
-    if (!window.confirm('Delete this expense record?')) return
+  const handleOpenDeleteExpense = (exp) => {
+    setDeletingExpense(exp)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleConfirmDeleteExpense = async () => {
+    if (!user || !deletingExpense) return
+    setIsSubmitting(true)
     try {
-      await deleteExpense(user.id, expenseId)
-      setExpenses(prev => prev.filter(e => e.id !== expenseId))
-      showToast('Expense deleted', 'info')
-    } catch (e) {
+      await deleteExpense(user.id, deletingExpense.id)
+      showToast('Expense deleted and account balance restored', 'info')
+      setIsDeleteModalOpen(false)
+      setDeletingExpense(null)
+      await loadData()
+    } catch (err) {
       showToast('Failed to delete expense', 'error')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
-  // Calculate Metrics
-  const todayStr = new Date().toISOString().split('T')[0]
+  // -----------------------------------------------------------------------------
+  // ACCOUNT HANDLERS
+  // -----------------------------------------------------------------------------
+  const handleOpenAddAccount = () => {
+    setEditingAccount(null)
+    setIsAccountModalOpen(true)
+  }
+
+  const handleOpenEditAccount = (acc) => {
+    setEditingAccount(acc)
+    setIsAccountModalOpen(true)
+  }
+
+  const handleSaveAccount = async (accountData) => {
+    if (!user) return
+    setIsSubmitting(true)
+    try {
+      if (editingAccount) {
+        await updateAccount(user.id, editingAccount.id, accountData)
+        showToast('Account updated', 'success')
+      } else {
+        await createAccount(user.id, accountData)
+        showToast(`Created account "${accountData.name}"`, 'success')
+      }
+      setIsAccountModalOpen(false)
+      await loadData()
+    } catch (err) {
+      showToast(err.message || 'Failed to save account', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeactivateAccount = async (accountId) => {
+    if (!user) return
+    try {
+      await deactivateAccount(user.id, accountId)
+      showToast('Account deactivated', 'info')
+      await loadData()
+    } catch (err) {
+      showToast('Failed to deactivate account', 'error')
+    }
+  }
+
+  const handleOpenAccountDetail = (acc) => {
+    setDetailAccount(acc)
+    setIsAccountDetailModalOpen(true)
+  }
+
+  // -----------------------------------------------------------------------------
+  // ADD MONEY & TRANSFER HANDLERS
+  // -----------------------------------------------------------------------------
+  const activeAccounts = accounts.filter((a) => a.is_active !== false)
+
+  const handleOpenAddMoney = (accId = null) => {
+    if (activeAccounts.length === 0) {
+      showToast('Please add an account first before adding money', 'info')
+      handleOpenAddAccount()
+      return
+    }
+    setAddMoneyAccountId(accId)
+    setIsAddMoneyModalOpen(true)
+  }
+
+  const handleSaveAddMoney = async (moneyData) => {
+    if (!user) return
+    setIsSubmitting(true)
+    try {
+      await addMoney(user.id, moneyData)
+      showToast(`Added ${formatINR(moneyData.amount)} deposit`, 'success')
+      setIsAddMoneyModalOpen(false)
+      await loadData()
+    } catch (err) {
+      showToast(err.message || 'Failed to add money', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleOpenTransfer = (fromAccId = null) => {
+    if (activeAccounts.length < 2) {
+      showToast('Add at least two accounts before transferring money', 'info')
+      return
+    }
+    setTransferFromAccountId(fromAccId)
+    setIsTransferModalOpen(true)
+  }
+
+  const handleSaveTransfer = async (transferData) => {
+    if (!user) return
+    setIsSubmitting(true)
+    try {
+      await transferMoney(user.id, transferData)
+      showToast(`Transferred ${formatINR(transferData.amount)} between accounts`, 'success')
+      setIsTransferModalOpen(false)
+      await loadData()
+    } catch (err) {
+      showToast(err.message || 'Failed to transfer money', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // -----------------------------------------------------------------------------
+  // METRICS & FILTER CALCULATIONS
+  // -----------------------------------------------------------------------------
   const now = new Date()
-  
+  const todayStr = now.toISOString().split('T')[0]
+
   const startOfWeek = new Date(now)
   startOfWeek.setDate(now.getDate() - now.getDay())
   const startOfWeekStr = startOfWeek.toISOString().split('T')[0]
@@ -136,248 +284,233 @@ export const ExpensesPage = () => {
   const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 
   const todayTotal = expenses
-    .filter(e => (e.spent_at || '').split('T')[0] === todayStr)
+    .filter((e) => (e.spent_at || '').split('T')[0] === todayStr)
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
 
   const weekTotal = expenses
-    .filter(e => (e.spent_at || '').split('T')[0] >= startOfWeekStr)
+    .filter((e) => (e.spent_at || '').split('T')[0] >= startOfWeekStr)
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
 
   const monthTotal = expenses
-    .filter(e => (e.spent_at || '').split('T')[0] >= startOfMonthStr)
+    .filter((e) => (e.spent_at || '').split('T')[0] >= startOfMonthStr)
     .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
 
-  // Filtered List
-  const filteredExpenses = expenses.filter(e => {
+  const totalSpending = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+
+  // Filtered expense list
+  const filteredExpenses = expenses.filter((e) => {
     const expDate = (e.spent_at || '').split('T')[0]
-    
+
     if (timeFilter === 'today' && expDate !== todayStr) return false
     if (timeFilter === 'week' && expDate < startOfWeekStr) return false
     if (timeFilter === 'month' && expDate < startOfMonthStr) return false
 
     if (categoryFilter !== 'all' && e.category !== categoryFilter) return false
+    if (accountFilter !== 'all' && e.account_id !== accountFilter) return false
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       const desc = (e.description || '').toLowerCase()
       const cat = (e.category || '').toLowerCase()
-      const pm = (e.payment_method || '').toLowerCase()
-      return desc.includes(q) || cat.includes(q) || pm.includes(q)
+      const accName = (e.accounts?.name || e.payment_method || '').toLowerCase()
+      return desc.includes(q) || cat.includes(q) || accName.includes(q)
     }
 
     return true
   })
 
+  // Account object lookup for delete modal
+  const accountMap = new Map(accounts.map((a) => [a.id, a]))
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             <DollarSign className="w-6 h-6 text-emerald-600" />
             <span>Expense Manager</span>
           </h1>
-          <p className="text-xs font-semibold text-slate-500 mt-0.5">Track daily spending, categories, and monthly totals</p>
+          <p className="text-xs font-semibold text-slate-500 mt-0.5">
+            Track daily spending, categories, and monthly totals
+          </p>
         </div>
 
-        <Button onClick={openAddModal} variant="primary" icon={Plus}>
-          Add Expense
-        </Button>
-      </div>
-
-      {/* Analytics Summary Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-emerald-50/80 border border-emerald-200/80">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">Today's Spending</span>
-          <div className="text-2xl font-black text-emerald-950 mt-1">{formatINR(todayTotal)}</div>
-        </Card>
-
-        <Card className="bg-indigo-50/80 border border-indigo-200/80">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-800">This Week</span>
-          <div className="text-2xl font-black text-indigo-950 mt-1">{formatINR(weekTotal)}</div>
-        </Card>
-
-        <Card className="bg-purple-50/80 border border-purple-200/80">
-          <span className="text-xs font-bold uppercase tracking-wider text-purple-800">This Month</span>
-          <div className="text-2xl font-black text-purple-950 mt-1">{formatINR(monthTotal)}</div>
-        </Card>
-      </div>
-
-      {/* Controls: Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1">
-          <Input
-            icon={Search}
-            placeholder="Search description, category, or payment method..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <Select
-            value={timeFilter}
-            onChange={(e) => setTimeFilter(e.target.value)}
-            options={[
-              { value: 'all', label: 'All Time' },
-              { value: 'today', label: 'Today Only' },
-              { value: 'week', label: 'This Week' },
-              { value: 'month', label: 'This Month' }
-            ]}
-          />
-
-          <Select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            options={[
-              { value: 'all', label: 'All Categories' },
-              { value: 'Food', label: 'Food' },
-              { value: 'Travel', label: 'Travel' },
-              { value: 'Shopping', label: 'Shopping' },
-              { value: 'Bills', label: 'Bills' },
-              { value: 'Health', label: 'Health' },
-              { value: 'Entertainment', label: 'Entertainment' },
-              { value: 'Education', label: 'Education' },
-              { value: 'Other', label: 'Other' }
-            ]}
-          />
+        <div>
+          {activeTab === 'expenses' ? (
+            <Button onClick={handleOpenAddExpense} variant="primary" icon={Plus}>
+              Add Expense
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button onClick={() => handleOpenAddMoney()} variant="primary" icon={Plus}>
+                Add Money
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Expenses List */}
-      {loading ? (
-        <LoadingState message="Fetching expenses history..." />
-      ) : filteredExpenses.length === 0 ? (
-        <EmptyState
-          icon={DollarSign}
-          title="No expenses logged"
-          description="Click Add Expense to log your payments and manage your daily budget."
-          actionLabel="Log Expense"
-          onAction={openAddModal}
-        />
-      ) : (
-        <div className="space-y-2">
-          {filteredExpenses.map((exp) => (
-            <Card
-              key={exp.id}
-              className="flex items-center justify-between p-4 bg-white border border-slate-200/70 hover:border-slate-300 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-emerald-100 text-emerald-800 font-bold shrink-0">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-base font-bold text-slate-900">{exp.description || exp.category}</div>
-                  <div className="text-xs font-medium text-slate-500 flex items-center gap-2">
-                    <span className="font-semibold text-slate-700">{exp.category}</span>
-                    <span>•</span>
-                    <span>{exp.payment_method || 'UPI'}</span>
-                    <span>•</span>
-                    <span>{new Date(exp.spent_at || exp.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                  </div>
-                </div>
+      {/* SUB-TABS CONTROL: [ Expenses ] [ Savings ] */}
+      <ExpenseTabs activeTab={activeTab} onChange={handleTabChange} />
+
+      {/* -----------------------------------------------------------------------
+          EXPENSES TAB VIEW
+         ----------------------------------------------------------------------- */}
+      {activeTab === 'expenses' && (
+        <div className="space-y-6">
+          {/* SUMMARY BAR */}
+          <ExpenseSummary
+            todayTotal={todayTotal}
+            weekTotal={weekTotal}
+            monthTotal={monthTotal}
+            totalSpending={totalSpending}
+          />
+
+          {/* FILTERS BAR */}
+          <ExpenseFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            timeFilter={timeFilter}
+            onTimeFilterChange={setTimeFilter}
+            categoryFilter={categoryFilter}
+            onCategoryFilterChange={setCategoryFilter}
+            accountFilter={accountFilter}
+            onAccountFilterChange={setAccountFilter}
+            accounts={accounts}
+          />
+
+          {/* EXPENSES LIST */}
+          <ExpenseList
+            expenses={filteredExpenses}
+            accounts={accounts}
+            loading={loading}
+            onEdit={handleOpenEditExpense}
+            onDelete={handleOpenDeleteExpense}
+            onAddExpenseClick={handleOpenAddExpense}
+          />
+
+          {/* SPENDING ANALYTICS SECTION */}
+          <div className="pt-6 border-t border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                Spending Analytics
+              </h2>
+
+              {/* SEGMENTED TOGGLE: [ Monthly ] [ Yearly ] */}
+              <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsMode('monthly')}
+                  className={`px-3 py-1 rounded-lg transition-all ${
+                    analyticsMode === 'monthly'
+                      ? 'bg-white text-emerald-800 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsMode('yearly')}
+                  className={`px-3 py-1 rounded-lg transition-all ${
+                    analyticsMode === 'yearly'
+                      ? 'bg-white text-emerald-800 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  Yearly
+                </button>
               </div>
+            </div>
 
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-lg font-black text-emerald-800">{formatINR(exp.amount)}</div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => openEditModal(exp)}
-                    className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(exp.id)}
-                    className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))}
+            {analyticsMode === 'monthly' ? (
+              <MonthlyAnalysis expenses={expenses} accounts={accounts} />
+            ) : (
+              <YearlyAnalysis expenses={expenses} />
+            )}
+          </div>
         </div>
       )}
 
-      {/* Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingExpense ? 'Edit Expense' : 'Log New Expense'}
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Amount (₹)"
-            type="number"
-            step="0.01"
-            placeholder="e.g. 250"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-          />
+      {/* -----------------------------------------------------------------------
+          SAVINGS TAB VIEW
+         ----------------------------------------------------------------------- */}
+      {activeTab === 'savings' && (
+        <AccountList
+          accounts={accounts}
+          loading={loading}
+          onAccountClick={handleOpenAccountDetail}
+          onAddAccountClick={handleOpenAddAccount}
+          onAddMoneyClick={() => handleOpenAddMoney()}
+          onTransferClick={() => handleOpenTransfer()}
+        />
+      )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              options={[
-                { value: 'Food', label: 'Food & Dining' },
-                { value: 'Travel', label: 'Travel & Transport' },
-                { value: 'Shopping', label: 'Shopping' },
-                { value: 'Bills', label: 'Bills & Utilities' },
-                { value: 'Health', label: 'Health & Fitness' },
-                { value: 'Entertainment', label: 'Entertainment' },
-                { value: 'Education', label: 'Education' },
-                { value: 'Other', label: 'Other' }
-              ]}
-            />
+      {/* -----------------------------------------------------------------------
+          MODALS & DIALOGS
+         ----------------------------------------------------------------------- */}
+      {/* EXPENSE MODAL */}
+      <ExpenseModal
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        onSave={handleSaveExpense}
+        editingExpense={editingExpense}
+        accounts={accounts}
+        isSubmitting={isSubmitting}
+      />
 
-            <Select
-              label="Payment Method"
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              options={[
-                { value: 'UPI', label: 'UPI / GPay' },
-                { value: 'Cash', label: 'Cash' },
-                { value: 'Card', label: 'Debit / Credit Card' },
-                { value: 'Bank Transfer', label: 'Bank Transfer' },
-                { value: 'Other', label: 'Other' }
-              ]}
-            />
-          </div>
+      {/* ACCOUNT MODAL */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        onSave={handleSaveAccount}
+        editingAccount={editingAccount}
+        isSubmitting={isSubmitting}
+      />
 
-          <Input
-            label="Description / Merchant"
-            placeholder="e.g. Lunch at Swagath Restaurant"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+      {/* ACCOUNT DETAIL MODAL */}
+      <AccountDetailModal
+        isOpen={isAccountDetailModalOpen}
+        onClose={() => setIsAccountDetailModalOpen(false)}
+        account={detailAccount}
+        userId={user?.id}
+        expenses={expenses}
+        onEditAccount={handleOpenEditAccount}
+        onAddMoney={(accId) => handleOpenAddMoney(accId)}
+        onTransfer={(accId) => handleOpenTransfer(accId)}
+        onDeactivateAccount={handleDeactivateAccount}
+      />
 
-          <Input
-            label="Date & Time"
-            type="datetime-local"
-            value={spentAt}
-            onChange={(e) => setSpentAt(e.target.value)}
-          />
+      {/* ADD MONEY MODAL */}
+      <AddMoneyModal
+        isOpen={isAddMoneyModalOpen}
+        onClose={() => setIsAddMoneyModalOpen(false)}
+        onSave={handleSaveAddMoney}
+        accounts={accounts}
+        preselectedAccountId={addMoneyAccountId}
+        isSubmitting={isSubmitting}
+      />
 
-          <Input
-            label="Notes (Optional)"
-            placeholder="e.g. Shared with 2 friends"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
+      {/* TRANSFER MONEY MODAL */}
+      <TransferMoneyModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        onSave={handleSaveTransfer}
+        accounts={accounts}
+        preselectedFromAccountId={transferFromAccountId}
+        isSubmitting={isSubmitting}
+      />
 
-          <div className="pt-2">
-            <Button type="submit" variant="primary" fullWidth isLoading={isSubmitting}>
-              {editingExpense ? 'Update Expense' : 'Log Expense'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* DELETE EXPENSE MODAL */}
+      <DeleteExpenseModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDeleteExpense}
+        expense={deletingExpense}
+        account={deletingExpense ? accountMap.get(deletingExpense.account_id) : null}
+        isSubmitting={isSubmitting}
+      />
     </div>
   )
 }
