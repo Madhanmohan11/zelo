@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { User, Sliders, Bell, Palette, HelpCircle, Shield, LogOut, ChevronRight } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -194,7 +194,7 @@ export const ProfilePage = () => {
         onClose={() => setIsModalOpen(false)}
         title="Edit Profile & Preferences"
       >
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSaveProfile} className="space-y-4">
           <div className="flex justify-center pb-2">
             <ProfileAvatar
               size="md"

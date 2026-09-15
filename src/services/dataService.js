@@ -469,6 +469,7 @@ export const deleteExpense = async (userId, expenseId) => {
 // USER PROFILE AND SETTINGS SERVICE
 // -----------------------------------------------------------------------------
 export const getUserProfile = async (userId) => {
+  if (!userId) return null
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
@@ -481,7 +482,7 @@ export const getUserProfile = async (userId) => {
 
   return getLocalData(`profile_${userId}`, {
     id: userId,
-    full_name: 'Madhan',
+    full_name: 'ZELO User',
     avatar_url: null,
     timezone: 'UTC',
     onboarding_completed: true
@@ -489,6 +490,7 @@ export const getUserProfile = async (userId) => {
 }
 
 export const getUserSettings = async (userId) => {
+  if (!userId) return null
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('user_settings').select('*').eq('user_id', userId).single()
@@ -505,11 +507,13 @@ export const getUserSettings = async (userId) => {
     sleep_time: '23:00',
     water_target_ml: 2500,
     daily_expense_budget: 1000.00,
-    notifications_enabled: false
+    notifications_enabled: false,
+    onboarding_completed: false
   })
 }
 
 export const updateUserProfile = async (userId, profileData) => {
+  if (!userId) return null
   const payload = { ...profileData, updated_at: new Date().toISOString() }
 
   if (isSupabaseConfigured && supabase) {
@@ -532,6 +536,7 @@ export const updateUserProfile = async (userId, profileData) => {
 }
 
 export const updateUserSettings = async (userId, settingsData) => {
+  if (!userId) return null
   const payload = { ...settingsData, updated_at: new Date().toISOString() }
 
   if (isSupabaseConfigured && supabase) {

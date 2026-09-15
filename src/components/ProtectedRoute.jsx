@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { LoadingState } from './ui/LoadingState'
 
 export const ProtectedRoute = ({ children }) => {
-  const { user, profile, loading } = useAuth()
+  const { user, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -17,12 +17,6 @@ export const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
-  }
-
-  // Redirect to onboarding if profile exists and onboarding is not completed
-  const onboardingCompleted = profile?.onboarding_completed
-  if (profile && !onboardingCompleted && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />
   }
 
   return children
