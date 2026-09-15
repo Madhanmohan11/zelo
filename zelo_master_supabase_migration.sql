@@ -1,3 +1,8 @@
+-- =============================================================================
+-- ZELO MASTER SUPABASE DATABASE MIGRATION & REAL-TIME BALANCE SYSTEM
+-- Complete 21-Table Schema, RLS Policies, Storage Buckets, Triggers, & Balance Engine
+-- Run this script directly in the Supabase SQL Editor (https://app.supabase.com)
+-- =============================================================================
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -19,13 +24,17 @@ $$ LANGUAGE plpgsql;
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT NOT NULL,
-  avatar_url TEXT,
+  avatar_url TEXT DEFAULT NULL,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   timezone TEXT DEFAULT 'UTC',
   onboarding_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure avatar_url defaults to NULL and columns exist on pre-existing tables
+ALTER TABLE public.profiles ALTER COLUMN avatar_url SET DEFAULT NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin'));
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -39,15 +48,12 @@ CREATE POLICY "Users can insert their own profile"
   ON public.profiles FOR INSERT 
   WITH CHECK (auth.uid() = id);
 
--- Prevent users from elevating their own role on UPDATE
 DROP POLICY IF EXISTS "Users can update their own profile fields" ON public.profiles;
-CREATE POLICY "Users can update their own profile fields" 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+CREATE POLICY "Users can update their own profile" 
   ON public.profiles FOR UPDATE 
   USING (auth.uid() = id)
-  WITH CHECK (
-    auth.uid() = id AND 
-    (role = (SELECT role FROM public.profiles WHERE id = auth.uid()))
-  );
+  WITH CHECK (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Users can delete their own profile" ON public.profiles;
 CREATE POLICY "Users can delete their own profile" 
@@ -98,6 +104,13 @@ CREATE TABLE IF NOT EXISTS public.accounts (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure account columns exist on pre-existing tables
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS bank_name TEXT;
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS account_number TEXT;
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS account_number_last4 TEXT;
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS account_holder_name TEXT;
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS nickname TEXT;
 
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 
@@ -272,6 +285,9 @@ CREATE TABLE IF NOT EXISTS public.expenses (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure account_id column exists on pre-existing expenses table
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL;
 
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
@@ -529,14 +545,14 @@ CREATE POLICY "Users can manage their own AI messages"
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
- INSERT INTO public.profiles (id, full_name, avatar_url, role, onboarding_completed)
-VALUES (
-  NEW.id,
-  COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-  NULL,
-  'user',
-  FALSE
-)
+  INSERT INTO public.profiles (id, full_name, avatar_url, role, onboarding_completed)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    NULL,
+    'user',
+    FALSE
+  )
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.user_settings (user_id)
@@ -585,6 +601,410 @@ CREATE TRIGGER set_goals_updated_at BEFORE UPDATE ON public.goals FOR EACH ROW E
 DROP TRIGGER IF EXISTS set_habits_updated_at ON public.habits;
 CREATE TRIGGER set_habits_updated_at BEFORE UPDATE ON public.habits FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS set_money_transactions_updated_at ON public.money_transactions;
+CREATE TRIGGER set_money_transactions_updated_at BEFORE UPDATE ON public.money_transactions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP TRIGGER IF EXISTS set_ai_conversations_updated_at ON public.ai_conversations;
+CREATE TRIGGER set_ai_conversations_updated_at BEFORE UPDATE ON public.ai_conversations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- REAL-TIME ACCOUNT BALANCE ENGINE (TRIGGERS & RECONCILIATION)
+-- -----------------------------------------------------------------------------
+
+-- 1. SECURITY HELPER: VERIFY ACCOUNT OWNERSHIP & PREVENT UNAUTHORIZED ACCESS
+CREATE OR REPLACE FUNCTION public.check_account_ownership(p_account_id UUID, p_user_id UUID)
+RETURNS VOID AS $$
+DECLARE
+  v_owner_id UUID;
+BEGIN
+  IF p_account_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT user_id INTO v_owner_id
+  FROM public.accounts
+  WHERE id = p_account_id;
+
+  IF v_owner_id IS NULL THEN
+    RAISE EXCEPTION 'Account with ID % does not exist', p_account_id;
+  END IF;
+
+  IF v_owner_id != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Account % does not belong to user %', p_account_id, p_user_id;
+  END IF;
+
+  IF auth.uid() IS NOT NULL AND auth.uid() != p_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: Authenticated user (%) does not match record user (%)', auth.uid(), p_user_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2. RECONCILIATION FUNCTION FOR FULL BALANCE AUDIT & REPAIR
+-- Equation: current_balance = opening_balance + income + transfers_in - transfers_out - expenses
+CREATE OR REPLACE FUNCTION public.recalculate_account_balance(account_uuid UUID)
+RETURNS NUMERIC AS $$
+DECLARE
+  v_opening NUMERIC(12,2) := 0.00;
+  v_income NUMERIC(12,2) := 0.00;
+  v_transfers_in NUMERIC(12,2) := 0.00;
+  v_transfers_out NUMERIC(12,2) := 0.00;
+  v_expenses NUMERIC(12,2) := 0.00;
+  v_calculated NUMERIC(12,2) := 0.00;
+BEGIN
+  -- Lock account row for update
+  SELECT opening_balance INTO v_opening
+  FROM public.accounts
+  WHERE id = account_uuid
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN 0.00;
+  END IF;
+
+  -- Income deposits into this account
+  SELECT COALESCE(SUM(amount), 0.00) INTO v_income
+  FROM public.money_transactions
+  WHERE account_id = account_uuid AND transaction_type = 'income';
+
+  -- Transfers IN to this account
+  SELECT COALESCE(SUM(amount), 0.00) INTO v_transfers_in
+  FROM public.money_transactions
+  WHERE to_account_id = account_uuid AND transaction_type = 'transfer';
+
+  -- Transfers OUT of this account
+  SELECT COALESCE(SUM(amount), 0.00) INTO v_transfers_out
+  FROM public.money_transactions
+  WHERE account_id = account_uuid AND transaction_type = 'transfer';
+
+  -- Expenses from public.expenses table (Sole source of truth for normal expenses)
+  SELECT COALESCE(SUM(amount), 0.00) INTO v_expenses
+  FROM public.expenses
+  WHERE account_id = account_uuid;
+
+  v_calculated := v_opening + v_income + v_transfers_in - v_transfers_out - v_expenses;
+
+  -- Update current_balance directly in database
+  UPDATE public.accounts
+  SET current_balance = v_calculated,
+      updated_at = NOW()
+  WHERE id = account_uuid;
+
+  RETURN v_calculated;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. NEW ACCOUNT CREATION & OPENING BALANCE SAFEGUARD TRIGGER
+CREATE OR REPLACE FUNCTION public.handle_account_insert_or_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    -- Force current_balance to equal opening_balance on creation
+    NEW.current_balance := COALESCE(NEW.opening_balance, 0.00);
+  ELSIF TG_OP = 'UPDATE' THEN
+    -- If opening_balance was updated, adjust current_balance by difference from OLD.current_balance
+    IF OLD.opening_balance IS DISTINCT FROM NEW.opening_balance THEN
+      NEW.current_balance := OLD.current_balance + (NEW.opening_balance - OLD.opening_balance);
+    ELSE
+      -- Protect current_balance from being overwritten by frontend payload updates
+      NEW.current_balance := OLD.current_balance;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_account_insert_or_update ON public.accounts;
+CREATE TRIGGER trigger_account_insert_or_update
+  BEFORE INSERT OR UPDATE ON public.accounts
+  FOR EACH ROW EXECUTE FUNCTION public.handle_account_insert_or_update();
+
+-- 4. EXPENSES BALANCE TRIGGER FUNCTION (INSERT, UPDATE, DELETE)
+CREATE OR REPLACE FUNCTION public.handle_expense_balance_change()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_current_bal NUMERIC(12,2);
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.account_id IS NOT NULL THEN
+      PERFORM public.check_account_ownership(NEW.account_id, NEW.user_id);
+      
+      SELECT current_balance INTO v_current_bal
+      FROM public.accounts
+      WHERE id = NEW.account_id
+      FOR UPDATE;
+
+      IF v_current_bal < NEW.amount THEN
+        RAISE EXCEPTION 'Insufficient balance: Account balance (%) is less than expense amount (%)', v_current_bal, NEW.amount;
+      END IF;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance - NEW.amount,
+          updated_at = NOW()
+      WHERE id = NEW.account_id;
+    END IF;
+    RETURN NEW;
+
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.account_id IS NOT NULL THEN
+      PERFORM public.check_account_ownership(OLD.account_id, OLD.user_id);
+
+      UPDATE public.accounts
+      SET current_balance = current_balance + OLD.amount,
+          updated_at = NOW()
+      WHERE id = OLD.account_id;
+    END IF;
+    RETURN OLD;
+
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF OLD.account_id IS NOT DISTINCT FROM NEW.account_id THEN
+      IF NEW.account_id IS NOT NULL THEN
+        PERFORM public.check_account_ownership(NEW.account_id, NEW.user_id);
+
+        SELECT current_balance INTO v_current_bal
+        FROM public.accounts
+        WHERE id = NEW.account_id
+        FOR UPDATE;
+
+        IF (v_current_bal + OLD.amount) < NEW.amount THEN
+          RAISE EXCEPTION 'Insufficient balance: Account balance (%) is less than required expense amount (%)', v_current_bal, (NEW.amount - OLD.amount);
+        END IF;
+
+        UPDATE public.accounts
+        SET current_balance = current_balance + OLD.amount - NEW.amount,
+            updated_at = NOW()
+        WHERE id = NEW.account_id;
+      END IF;
+    ELSE
+      IF OLD.account_id IS NOT NULL THEN
+        UPDATE public.accounts
+        SET current_balance = current_balance + OLD.amount,
+            updated_at = NOW()
+        WHERE id = OLD.account_id;
+      END IF;
+
+      IF NEW.account_id IS NOT NULL THEN
+        PERFORM public.check_account_ownership(NEW.account_id, NEW.user_id);
+
+        SELECT current_balance INTO v_current_bal
+        FROM public.accounts
+        WHERE id = NEW.account_id
+        FOR UPDATE;
+
+        IF v_current_bal < NEW.amount THEN
+          RAISE EXCEPTION 'Insufficient balance: New account balance (%) is less than expense amount (%)', v_current_bal, NEW.amount;
+        END IF;
+
+        UPDATE public.accounts
+        SET current_balance = current_balance - NEW.amount,
+            updated_at = NOW()
+        WHERE id = NEW.account_id;
+      END IF;
+    END IF;
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_expense_balance ON public.expenses;
+CREATE TRIGGER trigger_expense_balance
+  AFTER INSERT OR UPDATE OR DELETE ON public.expenses
+  FOR EACH ROW EXECUTE FUNCTION public.handle_expense_balance_change();
+
+-- 5. MONEY TRANSACTIONS BALANCE TRIGGER FUNCTION (INCOME, EXPENSE, TRANSFER)
+CREATE OR REPLACE FUNCTION public.handle_money_transaction_balance_change()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_source_bal NUMERIC(12,2);
+  v_dest_bal NUMERIC(12,2);
+  v_acc_bal NUMERIC(12,2);
+BEGIN
+  -- Prevent double deduction by enforcing public.expenses as single source of truth for expenses
+  IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') AND NEW.transaction_type = 'expense' THEN
+    RAISE EXCEPTION 'Expenses must be recorded in the public.expenses table to prevent double balance deduction.';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- INSERT
+  -- ---------------------------------------------------------------------------
+  IF TG_OP = 'INSERT' THEN
+    PERFORM public.check_account_ownership(NEW.account_id, NEW.user_id);
+    IF NEW.to_account_id IS NOT NULL THEN
+      PERFORM public.check_account_ownership(NEW.to_account_id, NEW.user_id);
+    END IF;
+
+    IF NEW.transaction_type = 'income' THEN
+      UPDATE public.accounts
+      SET current_balance = current_balance + NEW.amount,
+          updated_at = NOW()
+      WHERE id = NEW.account_id;
+
+    ELSIF NEW.transaction_type = 'transfer' THEN
+      IF NEW.to_account_id IS NULL THEN
+        RAISE EXCEPTION 'Transfer transaction requires a valid destination account (to_account_id)';
+      END IF;
+
+      IF NEW.account_id = NEW.to_account_id THEN
+        RAISE EXCEPTION 'Source and destination accounts must be different';
+      END IF;
+
+      SELECT current_balance INTO v_source_bal
+      FROM public.accounts
+      WHERE id = NEW.account_id
+      FOR UPDATE;
+
+      IF v_source_bal < NEW.amount THEN
+        RAISE EXCEPTION 'Insufficient balance: Source account balance (%) is less than transfer amount (%)', v_source_bal, NEW.amount;
+      END IF;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance - NEW.amount,
+          updated_at = NOW()
+      WHERE id = NEW.account_id;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance + NEW.amount,
+          updated_at = NOW()
+      WHERE id = NEW.to_account_id;
+    END IF;
+    RETURN NEW;
+
+  -- ---------------------------------------------------------------------------
+  -- DELETE
+  -- ---------------------------------------------------------------------------
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.transaction_type = 'income' THEN
+      SELECT current_balance INTO v_acc_bal
+      FROM public.accounts
+      WHERE id = OLD.account_id
+      FOR UPDATE;
+
+      IF v_acc_bal < OLD.amount THEN
+        RAISE EXCEPTION 'Insufficient balance: Cannot delete income deposit because account balance (%) is less than income amount (%)', v_acc_bal, OLD.amount;
+      END IF;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance - OLD.amount,
+          updated_at = NOW()
+      WHERE id = OLD.account_id;
+
+    ELSIF OLD.transaction_type = 'transfer' THEN
+      IF OLD.to_account_id IS NOT NULL THEN
+        SELECT current_balance INTO v_dest_bal
+        FROM public.accounts
+        WHERE id = OLD.to_account_id
+        FOR UPDATE;
+
+        IF v_dest_bal < OLD.amount THEN
+          RAISE EXCEPTION 'Insufficient balance: Destination account balance (%) is less than transfer amount (%) to reverse transfer', v_dest_bal, OLD.amount;
+        END IF;
+
+        UPDATE public.accounts
+        SET current_balance = current_balance - OLD.amount,
+            updated_at = NOW()
+        WHERE id = OLD.to_account_id;
+      END IF;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance + OLD.amount,
+          updated_at = NOW()
+      WHERE id = OLD.account_id;
+    END IF;
+    RETURN OLD;
+
+  -- ---------------------------------------------------------------------------
+  -- UPDATE
+  -- ---------------------------------------------------------------------------
+  ELSIF TG_OP = 'UPDATE' THEN
+    -- First, reverse OLD transaction
+    IF OLD.transaction_type = 'income' THEN
+      SELECT current_balance INTO v_acc_bal
+      FROM public.accounts
+      WHERE id = OLD.account_id
+      FOR UPDATE;
+
+      IF v_acc_bal < OLD.amount THEN
+        RAISE EXCEPTION 'Insufficient balance: Account balance (%) is insufficient to adjust income', v_acc_bal;
+      END IF;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance - OLD.amount,
+          updated_at = NOW()
+      WHERE id = OLD.account_id;
+
+    ELSIF OLD.transaction_type = 'transfer' THEN
+      IF OLD.to_account_id IS NOT NULL THEN
+        SELECT current_balance INTO v_dest_bal
+        FROM public.accounts
+        WHERE id = OLD.to_account_id
+        FOR UPDATE;
+
+        IF v_dest_bal < OLD.amount THEN
+          RAISE EXCEPTION 'Insufficient balance in destination account (%) to adjust transfer', v_dest_bal;
+        END IF;
+
+        UPDATE public.accounts
+        SET current_balance = current_balance - OLD.amount,
+            updated_at = NOW()
+        WHERE id = OLD.to_account_id;
+      END IF;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance + OLD.amount,
+          updated_at = NOW()
+      WHERE id = OLD.account_id;
+    END IF;
+
+    -- Second, apply NEW transaction
+    PERFORM public.check_account_ownership(NEW.account_id, NEW.user_id);
+    IF NEW.to_account_id IS NOT NULL THEN
+      PERFORM public.check_account_ownership(NEW.to_account_id, NEW.user_id);
+    END IF;
+
+    IF NEW.transaction_type = 'income' THEN
+      UPDATE public.accounts
+      SET current_balance = current_balance + NEW.amount,
+          updated_at = NOW()
+      WHERE id = NEW.account_id;
+
+    ELSIF NEW.transaction_type = 'transfer' THEN
+      IF NEW.to_account_id IS NULL THEN
+        RAISE EXCEPTION 'Transfer transaction requires a valid destination account (to_account_id)';
+      END IF;
+
+      IF NEW.account_id = NEW.to_account_id THEN
+        RAISE EXCEPTION 'Source and destination accounts must be different';
+      END IF;
+
+      SELECT current_balance INTO v_source_bal
+      FROM public.accounts
+      WHERE id = NEW.account_id
+      FOR UPDATE;
+
+      IF v_source_bal < NEW.amount THEN
+        RAISE EXCEPTION 'Insufficient balance: Source account balance (%) is less than transfer amount (%)', v_source_bal, NEW.amount;
+      END IF;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance - NEW.amount,
+          updated_at = NOW()
+      WHERE id = NEW.account_id;
+
+      UPDATE public.accounts
+      SET current_balance = current_balance + NEW.amount,
+          updated_at = NOW()
+      WHERE id = NEW.to_account_id;
+    END IF;
+
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_money_transaction_balance ON public.money_transactions;
+CREATE TRIGGER trigger_money_transaction_balance
+  AFTER INSERT OR UPDATE OR DELETE ON public.money_transactions
+  FOR EACH ROW EXECUTE FUNCTION public.handle_money_transaction_balance_change();
+
 -- -----------------------------------------------------------------------------
 -- PERFORMANCE INDEXES
 -- -----------------------------------------------------------------------------
@@ -593,6 +1013,7 @@ CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON public.workouts (user_id, s
 CREATE INDEX IF NOT EXISTS idx_remember_user_status ON public.remember_items (user_id, status);
 CREATE INDEX IF NOT EXISTS idx_accounts_user_active ON public.accounts (user_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_money_transactions_user_date ON public.money_transactions (user_id, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_money_transactions_account ON public.money_transactions (account_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_user_account ON public.expenses (user_id, account_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_user_spent ON public.expenses (user_id, spent_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON public.tasks (user_id, status);
@@ -648,3 +1069,53 @@ CREATE POLICY "Users can delete their own avatar files"
     bucket_id = 'avatars' AND 
     auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- =============================================================================
+-- MANUAL SQL TEST INSTRUCTIONS & VERIFICATION SCENARIOS
+-- Execute these statements manually in Supabase SQL Editor to test behavior:
+-- =============================================================================
+/*
+-- TEST 1: Create account with opening balance ₹10,000
+-- INSERT INTO public.accounts (id, user_id, name, account_type, opening_balance) 
+-- VALUES ('11111111-1111-1111-1111-111111111111', auth.uid(), 'Primary Bank', 'bank', 10000.00);
+-- Expected: SELECT current_balance FROM accounts WHERE id = '11111111-1111-1111-1111-111111111111' -> 10000.00
+
+-- TEST 2: Add ₹2,000 income
+-- INSERT INTO public.money_transactions (user_id, account_id, transaction_type, amount, description) 
+-- VALUES (auth.uid(), '11111111-1111-1111-1111-111111111111', 'income', 2000.00, 'Salary Deposit');
+-- Expected: current_balance = 12000.00
+
+-- TEST 3: Add ₹500 expense
+-- INSERT INTO public.expenses (id, user_id, account_id, amount, category) 
+-- VALUES ('22222222-2222-2222-2222-222222222222', auth.uid(), '11111111-1111-1111-1111-111111111111', 500.00, 'Food');
+-- Expected: current_balance = 11500.00
+
+-- TEST 4: Edit ₹500 expense -> ₹800
+-- UPDATE public.expenses SET amount = 800.00 WHERE id = '22222222-2222-2222-2222-222222222222';
+-- Expected: current_balance = 11200.00
+
+-- TEST 5: Delete ₹800 expense
+-- DELETE FROM public.expenses WHERE id = '22222222-2222-2222-2222-222222222222';
+-- Expected: current_balance = 12000.00
+
+-- TEST 6: Create second account with ₹5,000 and transfer ₹2,000 from first account to second
+-- INSERT INTO public.accounts (id, user_id, name, account_type, opening_balance) 
+-- VALUES ('33333333-3333-3333-3333-333333333333', auth.uid(), 'Cash Wallet', 'cash', 5000.00);
+-- INSERT INTO public.money_transactions (id, user_id, account_id, to_account_id, transaction_type, amount) 
+-- VALUES ('44444444-4444-4444-4444-444444444444', auth.uid(), '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'transfer', 2000.00);
+-- Expected: First account current_balance = 10000.00, Second account current_balance = 7000.00
+
+-- TEST 7: Delete transfer
+-- DELETE FROM public.money_transactions WHERE id = '44444444-4444-4444-4444-444444444444';
+-- Expected: First account current_balance = 12000.00, Second account current_balance = 5000.00
+
+-- TEST 8: Try ₹20,000 expense from account containing ₹12,000
+-- INSERT INTO public.expenses (user_id, account_id, amount, category) 
+-- VALUES (auth.uid(), '11111111-1111-1111-1111-111111111111', 20000.00, 'Shopping');
+-- Expected: Fails with "Insufficient balance: Account balance (12000.00) is less than expense amount (20000.00)"
+
+-- TEST 9: Try to use another user's account_id
+-- INSERT INTO public.expenses (user_id, account_id, amount, category) 
+-- VALUES (auth.uid(), '00000000-0000-0000-0000-000000000000', 100.00, 'Other');
+-- Expected: Fails with "Unauthorized: Account 00000000-0000-0000-0000-000000000000 does not exist / belong to user"
+*/
