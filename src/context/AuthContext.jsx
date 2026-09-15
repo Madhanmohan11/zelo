@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { getUserProfile, getUserSettings, updateUserProfile, updateUserSettings } from '../services/dataService'
+import {
+  getUserProfile,
+  getUserSettings,
+  createUserProfile,
+  createUserSettings,
+  updateUserProfile,
+  updateUserSettings
+} from '../services/dataService'
 
 const AuthContext = createContext(null)
 
@@ -65,42 +72,111 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
+  // Theme applying utility
+  const applyTheme = (themeMode) => {
+    const root = document.documentElement
+    if (themeMode === 'dark') {
+      root.classList.add('dark')
+    } else if (themeMode === 'light') {
+      root.classList.remove('dark')
+    } else if (themeMode === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      if (prefersDark) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+    }
+  }
+
   const loadUserData = async (userId) => {
+    if (!userId) return
     try {
-      const p = await getUserProfile(userId)
-      const s = await getUserSettings(userId)
-      setProfile(
-        p || {
-          id: userId,
-          full_name: 'Madhan',
-          avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-          onboarding_completed: true
+      let p = await getUserProfile(userId)
+      let s = await getUserSettings(userId)
+
+      // Auto-create missing profiles table record if genuinely null
+      if (!p && isSupabaseConfigured && supabase) {
+        try {
+          const { data: authUserData } = await supabase.auth.getUser()
+          const authUser = authUserData?.user
+          const defaultName =
+            authUser?.user_metadata?.full_name ||
+            authUser?.user_metadata?.name ||
+            authUser?.email?.split('@')[0] ||
+            'ZELO User'
+
+          p = await createUserProfile(userId, {
+            full_name: defaultName
+          })
+        } catch (repairErr) {
+          console.warn('Profile auto-creation error:', repairErr)
         }
-      )
-      setUserSettings(
-        s || {
-          user_id: userId,
-          wake_time: '07:00',
-          sleep_time: '23:00',
-          water_target_ml: 2500,
-          daily_expense_budget: 1000.00
+      }
+
+      // Auto-create missing user_settings table record if genuinely null
+      if (!s && isSupabaseConfigured && supabase) {
+        try {
+          s = await createUserSettings(userId, {
+            theme: 'light',
+            onboarding_completed: false
+          })
+        } catch (repairErr) {
+          console.warn('Settings auto-creation error:', repairErr)
         }
-      )
-    } catch (e) {
-      console.warn('Failed to load user profile & settings:', e)
-      setProfile({
+      }
+
+      const activeProfile = p || {
         id: userId,
-        full_name: 'Madhan',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'ZELO User',
+        avatar_url: null,
         onboarding_completed: true
-      })
-      setUserSettings({
+      }
+
+      const activeSettings = s || {
         user_id: userId,
         wake_time: '07:00',
         sleep_time: '23:00',
         water_target_ml: 2500,
-        daily_expense_budget: 1000.00
-      })
+        daily_expense_budget: 1000.00,
+        notifications_enabled: false,
+        theme: 'light'
+      }
+
+      setProfile(activeProfile)
+      setUserSettings(activeSettings)
+
+      // Apply theme preference
+      const activeTheme = activeSettings.theme || localStorage.getItem('zelo_theme') || 'light'
+      applyTheme(activeTheme)
+    } catch (e) {
+      console.warn('Failed to load user profile & settings:', e)
+    }
+  }
+
+  // Update theme setting
+  const updateThemePreference = async (newTheme) => {
+    if (!user) return
+    try {
+      localStorage.setItem('zelo_theme', newTheme)
+      applyTheme(newTheme)
+      await updateUserSettings(user.id, { theme: newTheme })
+      setUserSettings((prev) => (prev ? { ...prev, theme: newTheme } : { user_id: user.id, theme: newTheme }))
+    } catch (err) {
+      console.error('Failed to save theme preference:', err)
+      throw err
+    }
+  }
+
+  // Update password mechanism using Supabase Auth
+  const updatePassword = async (newPassword) => {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      return data
+    } else {
+      // Mock session mode
+      return { user }
     }
   }
 
@@ -217,7 +293,7 @@ export const AuthProvider = ({ children }) => {
       const mockUser = {
         id: 'user_demo_123',
         email,
-        user_metadata: { full_name: 'Madhan' }
+        user_metadata: { full_name: 'ZELO User' }
       }
       localStorage.setItem(MOCK_AUTH_KEY, JSON.stringify(mockUser))
       setUser(mockUser)
@@ -253,7 +329,9 @@ export const AuthProvider = ({ children }) => {
         resendOtp,
         login,
         logout,
-        loadUserData
+        loadUserData,
+        updateThemePreference,
+        updatePassword
       }}
     >
       {children}

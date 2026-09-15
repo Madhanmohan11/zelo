@@ -16,6 +16,11 @@ import { WorkoutPage } from './pages/WorkoutPage'
 import { RememberPage } from './pages/RememberPage'
 import { ExpensesPage } from './pages/ExpensesPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { PersonalInfoPage } from './pages/profile/PersonalInfoPage'
+import { DailySettingsPage } from './pages/profile/DailySettingsPage'
+import { NotificationSettingsPage } from './pages/profile/NotificationSettingsPage'
+import { AppearancePage } from './pages/profile/AppearancePage'
+import { AccountSecurityPage } from './pages/profile/AccountSecurityPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LoadingState } from './components/ui/LoadingState'
 
@@ -99,7 +104,12 @@ export function App() {
               <Route path="/expenses" element={<ExpensesPage />} />
               <Route path="/expenses/savings" element={<ExpensesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/profile/personal" element={<PersonalInfoPage />} />
+              <Route path="/profile/daily-settings" element={<DailySettingsPage />} />
+              <Route path="/profile/notifications" element={<NotificationSettingsPage />} />
+              <Route path="/profile/appearance" element={<AppearancePage />} />
+              <Route path="/profile/security" element={<AccountSecurityPage />} />
+              <Route path="/settings" element={<Navigate to="/profile" replace />} />
             </Route>
 
             {/* Standalone ZELO Admin Panel Routes (Frontend-only setup before Supabase auth connection) */}

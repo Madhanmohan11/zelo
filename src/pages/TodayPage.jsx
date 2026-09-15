@@ -5,7 +5,7 @@ import {
   Utensils,
   Dumbbell,
   Bookmark,
-  DollarSign,
+  IndianRupee,
   Plus,
   Sparkles
 } from 'lucide-react'

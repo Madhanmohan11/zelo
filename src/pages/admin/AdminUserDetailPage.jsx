@@ -7,7 +7,7 @@ import {
   Utensils,
   Dumbbell,
   Bell,
-  DollarSign,
+  IndianRupee,
   UserX,
   UserCheck,
   RotateCcw,
@@ -195,7 +195,7 @@ export function AdminUserDetailPage() {
         <div className="p-5 bg-white border border-slate-200/80 rounded-2xl shadow-2xs">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Expenses</span>
-            <DollarSign className="w-4 h-4 text-amber-600" />
+            <IndianRupee className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-extrabold text-slate-900 mt-2">{user.stats.expenses}</div>
           <span className="text-[10px] text-slate-400 font-semibold">Expense entries</span>

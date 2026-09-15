@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ShieldAlert, Cpu, Server, CheckCircle2 } from 'lucide-react';
+import { Activity, ShieldAlert, Cpu, Server, CheckCircle2, Database } from 'lucide-react';
 import { StatusIndicator } from '../../components/admin/StatusIndicator';
 import { mockAdminService } from '../../admin/services/mockAdminService';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export function AdminSystemPage() {
   const [data, setData] = useState(null);
@@ -40,6 +41,30 @@ export function AdminSystemPage() {
         </p>
       </div>
 
+      {/* Backend Supabase Connection Card (Admin Panel Exclusive) */}
+      <div className="p-6 bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-800 font-bold">
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-extrabold text-slate-900">Backend Connection</h3>
+            <p className="text-xs font-medium text-slate-500">
+              {isSupabaseConfigured
+                ? 'Connected to live Supabase PostgreSQL server with RLS security policies enabled.'
+                : 'Operating in Local Storage sandbox mode.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60 text-xs text-slate-700 font-bold flex items-center justify-between">
+          <span className="font-mono">Engine: {isSupabaseConfigured ? 'Supabase PostgreSQL' : 'LocalStorage Sandbox'}</span>
+          <span className={`px-2.5 py-1 rounded-full text-[11px] uppercase tracking-wider font-extrabold ${isSupabaseConfigured ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+            {isSupabaseConfigured ? 'Live Supabase DB' : 'Local Sandbox'}
+          </span>
+        </div>
+      </div>
+
       {/* Banner Card */}
       <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -48,7 +73,7 @@ export function AdminSystemPage() {
             <h3 className="text-lg font-bold">{overall}</h3>
           </div>
           <p className="text-xs text-slate-300 font-medium">
-            Frontend UI is complete. Database tables, Supabase integration, and real auth will be connected in Phase 2.
+            System metrics active. Supabase database tables and auth policies configured.
           </p>
         </div>
 

@@ -5,9 +5,8 @@ import {
   Utensils,
   Dumbbell,
   Bookmark,
-  DollarSign,
+  IndianRupee,
   User,
-  Settings,
   Plus,
   LogOut,
   Sparkles,
@@ -31,7 +30,7 @@ export const AppLayout = () => {
 
   const navItemsRight = [
     { path: '/remember', ariaLabel: 'Remember', title: 'Remember', icon: Bookmark },
-    { path: '/expenses', ariaLabel: 'Expenses', title: 'Expenses', icon: DollarSign },
+    { path: '/expenses', ariaLabel: 'Expenses', title: 'Expenses', icon: IndianRupee },
   ]
 
   const openQuickAdd = (tab = 'expense') => {
@@ -47,29 +46,19 @@ export const AppLayout = () => {
     }
   }
 
-  const avatarUrl = profile?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-
   return (
     <div className="min-h-screen ambient-bg text-slate-900 font-sans selection:bg-emerald-200 flex flex-col items-center">
-      {/* CLEAN TOP HEADER — NO ADD BUTTON */}
+      {/* CLEAN TOP HEADER — INCREASED HEIGHT & CENTER ALIGNED */}
       <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 pt-safe shadow-xs">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between min-h-[60px]">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between min-h-[68px]">
           {/* Left: ZELO Brand Logo */}
-          <NavLink to="/today" className="flex items-center" aria-label="ZELO Home">
-            <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-8 w-auto object-contain max-w-[130px]" />
+          <NavLink to="/today" className="flex items-center my-auto" aria-label="ZELO Home">
+            <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-8.5 sm:h-9 w-auto object-contain max-w-[140px]" />
           </NavLink>
 
-          {/* Right Actions: Settings Icon & Profile Avatar */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <NavLink
-              to="/settings"
-              title="Settings"
-              aria-label="Settings"
-              className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-            </NavLink>
-            <NavLink to="/profile" title="Profile" aria-label="Profile">
+          {/* Right Action: Profile Avatar */}
+          <div className="flex items-center shrink-0 my-auto">
+            <NavLink to="/profile" title="Profile" aria-label="Profile" className="flex items-center justify-center">
               <ProfileAvatar size="sm" />
             </NavLink>
           </div>

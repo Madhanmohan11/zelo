@@ -1,5 +1,5 @@
 import React from 'react'
-import { DollarSign, Wallet } from 'lucide-react'
+import { IndianRupee, Wallet } from 'lucide-react'
 
 export const ExpenseTabs = ({ activeTab, onChange }) => {
   return (
@@ -13,7 +13,7 @@ export const ExpenseTabs = ({ activeTab, onChange }) => {
             : 'text-slate-500 hover:text-slate-900 font-semibold'
         }`}
       >
-        <DollarSign className={`w-4 h-4 ${activeTab === 'expenses' ? 'text-emerald-600' : 'text-slate-400'}`} />
+        <IndianRupee className={`w-4 h-4 ${activeTab === 'expenses' ? 'text-emerald-600' : 'text-slate-400'}`} />
         <span>Expenses</span>
       </button>
 

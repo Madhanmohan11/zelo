@@ -3,7 +3,7 @@ import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Select } from './ui/Select'
-import { Utensils, Dumbbell, Bookmark, DollarSign } from 'lucide-react'
+import { Utensils, Dumbbell, Bookmark, IndianRupee } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { createMeal, createWorkout, createRememberItem, createExpense } from '../services/dataService'
@@ -132,7 +132,7 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
   }
 
   const types = [
-    { id: 'expense', label: 'Expense', icon: DollarSign, activeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+    { id: 'expense', label: 'Expense', icon: IndianRupee, activeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
     { id: 'remember', label: 'Remember', icon: Bookmark, activeBg: 'bg-purple-50 text-purple-800 border-purple-200' },
     { id: 'food', label: 'Food', icon: Utensils, activeBg: 'bg-amber-50 text-amber-800 border-amber-200' },
     { id: 'workout', label: 'Workout', icon: Dumbbell, activeBg: 'bg-rose-50 text-rose-800 border-rose-200' }

@@ -468,92 +468,189 @@ export const deleteExpense = async (userId, expenseId) => {
 // -----------------------------------------------------------------------------
 // USER PROFILE AND SETTINGS SERVICE
 // -----------------------------------------------------------------------------
+// USER PROFILE AND SETTINGS SERVICE
+// -----------------------------------------------------------------------------
 export const getUserProfile = async (userId) => {
   if (!userId) return null
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
       if (!error && data) return data
-      console.warn('Supabase profiles table error, using local fallback:', error?.message)
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Supabase profiles fetch error:', error?.message)
+      }
     } catch (err) {
       console.warn('Supabase getUserProfile failed:', err.message)
     }
   }
 
-  return getLocalData(`profile_${userId}`, {
+  return getLocalData(`profile_${userId}`, null)
+}
+
+export const createUserProfile = async (userId, initialData = {}) => {
+  if (!userId) return null
+
+  const newProfile = {
     id: userId,
-    full_name: 'ZELO User',
-    avatar_url: null,
-    timezone: 'UTC',
-    onboarding_completed: true
-  })
+    full_name: initialData.full_name || 'ZELO User',
+    role: 'user',
+    avatar_url: null
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([newProfile])
+        .select()
+        .maybeSingle()
+
+      if (!error && data) return data
+      if (error) {
+        console.warn('Supabase createUserProfile error:', error?.message)
+      }
+    } catch (err) {
+      console.warn('Supabase createUserProfile failed:', err.message)
+    }
+  }
+
+  setLocalData(`profile_${userId}`, newProfile)
+  return newProfile
+}
+
+export const updateUserProfile = async (userId, profileData) => {
+  if (!userId) return null
+
+  // Strip id, role, created_at, updated_at from client update payload
+  const { id, role, created_at, updated_at, ...cleanData } = profileData
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(cleanData)
+        .eq('id', userId)
+        .select()
+        .maybeSingle()
+
+      if (!error && data) return data
+      if (error) {
+        console.error('Supabase updateUserProfile error:', error?.message)
+        throw error
+      }
+    } catch (err) {
+      console.warn('Supabase updateUserProfile failed:', err.message)
+      throw err
+    }
+  }
+
+  const current = await getUserProfile(userId)
+  const updated = { ...current, ...cleanData }
+  setLocalData(`profile_${userId}`, updated)
+  return updated
 }
 
 export const getUserSettings = async (userId) => {
   if (!userId) return null
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('user_settings').select('*').eq('user_id', userId).single()
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+
       if (!error && data) return data
-      console.warn('Supabase user_settings table error, using local fallback:', error?.message)
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Supabase user_settings fetch error:', error?.message)
+      }
     } catch (err) {
       console.warn('Supabase getUserSettings failed:', err.message)
     }
   }
 
-  return getLocalData(`settings_${userId}`, {
+  return getLocalData(`settings_${userId}`, null)
+}
+
+export const createUserSettings = async (userId, initialSettings = {}) => {
+  if (!userId) return null
+
+  const newSettings = {
     user_id: userId,
-    wake_time: '07:00',
-    sleep_time: '23:00',
-    water_target_ml: 2500,
-    daily_expense_budget: 1000.00,
-    notifications_enabled: false,
-    onboarding_completed: false
-  })
-}
-
-export const updateUserProfile = async (userId, profileData) => {
-  if (!userId) return null
-  const payload = { ...profileData, updated_at: new Date().toISOString() }
-
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert({ id: userId, ...payload })
-        .select()
-        .single()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn('Supabase updateUserProfile failed:', err.message)
-    }
+    wake_time: initialSettings.wake_time || '07:00',
+    sleep_time: initialSettings.sleep_time || '23:00',
+    water_target_ml: initialSettings.water_target_ml || 2500,
+    daily_expense_budget: initialSettings.daily_expense_budget || 1000.00,
+    notifications_enabled: initialSettings.notifications_enabled || false,
+    notification_settings: initialSettings.notification_settings || {
+      daily_reminder: true,
+      daily_reminder_time: '08:00',
+      meal_reminders: true,
+      workout_reminder: true,
+      workout_reminder_time: '18:00',
+      water_reminder: true,
+      expense_reminder: true,
+      expense_reminder_time: '21:00',
+      goal_reminders: true
+    },
+    theme: initialSettings.theme || 'light',
+    onboarding_completed: initialSettings.onboarding_completed ?? false
   }
-
-  const current = await getUserProfile(userId)
-  const updated = { ...current, ...payload }
-  setLocalData(`profile_${userId}`, updated)
-  return updated
-}
-
-export const updateUserSettings = async (userId, settingsData) => {
-  if (!userId) return null
-  const payload = { ...settingsData, updated_at: new Date().toISOString() }
 
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('user_settings')
-        .upsert({ user_id: userId, ...payload })
+        .insert([newSettings])
         .select()
-        .single()
+        .maybeSingle()
+
       if (!error && data) return data
+      if (error) {
+        console.warn('Supabase createUserSettings error:', error?.message)
+      }
+    } catch (err) {
+      console.warn('Supabase createUserSettings failed:', err.message)
+    }
+  }
+
+  setLocalData(`settings_${userId}`, newSettings)
+  return newSettings
+}
+
+export const updateUserSettings = async (userId, settingsData) => {
+  if (!userId) return null
+
+  // Strip user_id, id, created_at, updated_at from client update payload
+  const { user_id, id, created_at, updated_at, ...cleanSettings } = settingsData
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('user_settings')
+        .update(cleanSettings)
+        .eq('user_id', userId)
+        .select()
+        .maybeSingle()
+
+      if (!error && data) return data
+      if (error) {
+        console.error('Supabase updateUserSettings error:', error?.message)
+        throw error
+      }
     } catch (err) {
       console.warn('Supabase updateUserSettings failed:', err.message)
+      throw err
     }
   }
 
   const current = await getUserSettings(userId)
-  const updated = { ...current, ...payload }
+  const updated = { ...current, ...cleanSettings }
   setLocalData(`settings_${userId}`, updated)
   return updated
 }
