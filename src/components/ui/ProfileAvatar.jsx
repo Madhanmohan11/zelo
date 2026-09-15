@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Camera, Trash2, Loader2, User } from 'lucide-react'
+import { Camera, Trash2, Loader2 } from 'lucide-react'
 import { getAvatarSignedUrl, uploadAvatar, removeAvatar, getUserInitials } from '../../services/avatarService'
 import { updateUserProfile } from '../../services/dataService'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
+import { ImageCropModal } from './ImageCropModal'
 
 export const ProfileAvatar = ({
   size = 'lg',
@@ -19,6 +20,10 @@ export const ProfileAvatar = ({
   const [signedUrl, setSignedUrl] = useState(null)
   const [isLoadingUrl, setIsLoadingUrl] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+
+  // Cropper Modal States
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState(null)
 
   const avatarPath = profile?.avatar_url
   const fullName = profile?.full_name || 'ZELO User'
@@ -75,14 +80,39 @@ export const ProfileAvatar = ({
     xl: 'w-5 h-5'
   }
 
-  const handleFileChange = async (e) => {
+  // Handle raw file selection -> Open Crop Modal
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      showToast('Please select a valid image file (JPEG, PNG, or WebP).', 'error')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
+    if (file.size > MAX_SIZE_BYTES) {
+      showToast('Image must be smaller than 10 MB.', 'error')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    setSelectedFile(file)
+    setIsCropModalOpen(true)
+  }
+
+  // Handle confirmed cropped image blob from ImageCropModal
+  const handleCropComplete = async (croppedBlob) => {
+    if (!user || !croppedBlob) return
+
     setIsUploading(true)
     try {
-      // 1. Upload & compress avatar via avatarService
-      const newPath = await uploadAvatar(user.id, file)
+      const croppedFile = new File([croppedBlob], 'profile.webp', { type: 'image/webp' })
+
+      // 1. Upload & compress cropped avatar via avatarService
+      const newPath = await uploadAvatar(user.id, croppedFile)
 
       // 2. Update profiles table in database
       await updateUserProfile(user.id, { avatar_url: newPath })
@@ -99,6 +129,8 @@ export const ProfileAvatar = ({
       showToast(err.message || 'Failed to upload profile photo.', 'error')
     } finally {
       setIsUploading(false)
+      setIsCropModalOpen(false)
+      setSelectedFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
@@ -195,6 +227,21 @@ export const ProfileAvatar = ({
         >
           <Trash2 className="w-3.5 h-3.5" /> Remove photo
         </button>
+      )}
+
+      {/* Interactive Crop & Edit Modal */}
+      {isCropModalOpen && selectedFile && (
+        <ImageCropModal
+          isOpen={isCropModalOpen}
+          imageSrc={selectedFile}
+          onClose={() => {
+            setIsCropModalOpen(false)
+            setSelectedFile(null)
+            if (fileInputRef.current) fileInputRef.current.value = ''
+          }}
+          onCropComplete={handleCropComplete}
+          isLoading={isUploading}
+        />
       )}
     </div>
   )
