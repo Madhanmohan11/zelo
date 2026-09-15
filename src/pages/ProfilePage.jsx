@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { User, Mail, Sliders, Bell, Palette, HelpCircle, Shield, LogOut, Camera, Trash2, ChevronRight, Save } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { User, Sliders, Bell, Palette, HelpCircle, Shield, LogOut, ChevronRight } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
-import { UserAvatar } from '../components/ui/UserAvatar'
+import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { updateUserProfile, updateUserSettings } from '../services/dataService'
@@ -137,44 +137,19 @@ export const ProfilePage = () => {
 
       {/* Avatar & User Header Card */}
       <Card className="bg-white border border-slate-200/70 p-6 rounded-3xl flex flex-col items-center text-center shadow-xs">
-        <div className="relative mb-3">
-          <UserAvatar
-            avatarPath={profile?.avatar_url}
-            name={profile?.full_name || user?.email}
-            size="xl"
-            editable
-            onEditClick={() => fileInputRef.current?.click()}
-            isLoading={isUploading || isRemoving}
+        <div className="mb-3">
+          <ProfileAvatar
+            size="lg"
+            editable={true}
+            showRemove={true}
+            onAvatarUpdated={() => {
+              if (user) loadUserData(user.id)
+            }}
           />
         </div>
 
-        <h2 className="text-xl font-black text-slate-900">{profile?.full_name || 'User'}</h2>
-        <p className="text-xs font-semibold text-slate-500 mt-0.5">{user?.email || ''}</p>
-
-        {/* PHOTO ACTION BUTTONS */}
-        <div className="flex items-center gap-2 mt-4">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading || isRemoving}
-            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs active:scale-95 disabled:opacity-50"
-          >
-            <Camera className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{hasPhoto ? 'Change Photo' : 'Upload Photo'}</span>
-          </button>
-
-          {hasPhoto && (
-            <button
-              type="button"
-              onClick={handleRemovePhoto}
-              disabled={isUploading || isRemoving}
-              className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              <span>Remove Photo</span>
-            </button>
-          )}
-        </div>
+        <h2 className="text-xl font-black text-slate-900 mt-1">{fullName || 'Madhan'}</h2>
+        <p className="text-xs font-semibold text-slate-500 mt-0.5">{user?.email || 'madhan@example.com'}</p>
       </Card>
 
       {/* Settings Navigation List */}
@@ -219,7 +194,18 @@ export const ProfilePage = () => {
         onClose={() => setIsModalOpen(false)}
         title="Edit Profile & Preferences"
       >
-        <form onSubmit={handleSaveProfile} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="flex justify-center pb-2">
+            <ProfileAvatar
+              size="md"
+              editable={true}
+              showRemove={true}
+              onAvatarUpdated={() => {
+                if (user) loadUserData(user.id)
+              }}
+            />
+          </div>
+
           <Input
             label="Full Name"
             icon={User}
@@ -267,3 +253,5 @@ export const ProfilePage = () => {
     </div>
   )
 }
+
+export default ProfilePage

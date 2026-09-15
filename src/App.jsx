@@ -20,6 +20,18 @@ import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LoadingState } from './components/ui/LoadingState'
 
+// Admin Panel Components & Pages
+import { AdminLayout } from './components/admin/AdminLayout'
+import { AdminDashboard } from './pages/admin/AdminDashboard'
+import { AdminUsersPage } from './pages/admin/AdminUsersPage'
+import { AdminUserDetailPage } from './pages/admin/AdminUserDetailPage'
+import { AdminAnalyticsPage } from './pages/admin/AdminAnalyticsPage'
+import { AdminReportsPage } from './pages/admin/AdminReportsPage'
+import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage'
+import { AdminSystemPage } from './pages/admin/AdminSystemPage'
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage'
+import { AdminProfilePage } from './pages/admin/AdminProfilePage'
+
 const HomeRedirect = () => {
   const { user, profile, loading } = useAuth()
 
@@ -105,6 +117,19 @@ export function App() {
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
+            {/* Standalone ZELO Admin Panel Routes (Frontend-only setup before Supabase auth connection) */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="users/:id" element={<AdminUserDetailPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="reports" element={<AdminReportsPage />} />
+              <Route path="notifications" element={<AdminNotificationsPage />} />
+              <Route path="system" element={<AdminSystemPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="profile" element={<AdminProfilePage />} />
+            </Route>
+
             {/* Fallback Catch-all Route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -115,3 +140,4 @@ export function App() {
 }
 
 export default App
+

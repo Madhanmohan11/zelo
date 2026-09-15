@@ -105,7 +105,7 @@ export const RegisterPage = () => {
             <div className="pt-2">
               <Button type="submit" variant="primary" fullWidth size="lg" isLoading={isLoading}>
                 <span>Create Account</span>
-                <ArrowRight className="w-4 h-4 ml-1" />
+                <ArrowRight className="w-5 h-5 shrink-0" />
               </Button>
             </div>
           </form>
@@ -121,3 +121,5 @@ export const RegisterPage = () => {
     </div>
   )
 }
+
+export default RegisterPage

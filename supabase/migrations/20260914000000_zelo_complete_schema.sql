@@ -1,7 +1,7 @@
 -- =============================================================================
 -- ZELO COMPLETE POSTGRESQL DATABASE SCHEMA & SECURITY MIGRATION
--- Copy and execute this entire script in Supabase SQL Editor:
--- https://supabase.com/dashboard/project/_/sql
+-- Migration Version: 20260914000000_zelo_complete_schema.sql
+-- Description: Complete Production Schema for ZELO Personal Tracker & Admin System
 -- =============================================================================
 
 -- Enable required extensions
@@ -566,56 +566,3 @@ CREATE INDEX IF NOT EXISTS idx_sleep_user_start ON public.sleep_logs (user_id, s
 CREATE INDEX IF NOT EXISTS idx_calendar_user_start ON public.calendar_events (user_id, start_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications (user_id, read_at);
 CREATE INDEX IF NOT EXISTS idx_activity_user_created ON public.activity_logs (user_id, created_at);
-
--- -----------------------------------------------------------------------------
--- SUPABASE STORAGE: PRIVATE AVATARS BUCKET & RLS POLICIES
--- -----------------------------------------------------------------------------
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'avatars',
-  'avatars',
-  false,
-  5242880,
-  ARRAY['image/jpeg', 'image/png', 'image/webp']
-)
-ON CONFLICT (id) DO UPDATE SET
-  public = false,
-  file_size_limit = 5242880,
-  allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp'];
-
-DROP POLICY IF EXISTS "Authenticated users can read their own avatar" ON storage.objects;
-CREATE POLICY "Authenticated users can read their own avatar"
-  ON storage.objects FOR SELECT
-  TO authenticated
-  USING (
-    bucket_id = 'avatars' 
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-DROP POLICY IF EXISTS "Authenticated users can upload their own avatar" ON storage.objects;
-CREATE POLICY "Authenticated users can upload their own avatar"
-  ON storage.objects FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    bucket_id = 'avatars' 
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-DROP POLICY IF EXISTS "Authenticated users can update their own avatar" ON storage.objects;
-CREATE POLICY "Authenticated users can update their own avatar"
-  ON storage.objects FOR UPDATE
-  TO authenticated
-  USING (
-    bucket_id = 'avatars' 
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-DROP POLICY IF EXISTS "Authenticated users can delete their own avatar" ON storage.objects;
-CREATE POLICY "Authenticated users can delete their own avatar"
-  ON storage.objects FOR DELETE
-  TO authenticated
-  USING (
-    bucket_id = 'avatars' 
-    AND (storage.foldername(name))[1] = auth.uid()::text
-  );
-

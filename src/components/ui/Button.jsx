@@ -12,7 +12,7 @@ export const Button = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]'
+  const baseStyles = 'inline-flex flex-row items-center justify-center font-bold transition-all duration-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98] whitespace-nowrap'
 
   const variants = {
     primary: 'bg-[#0F172A] hover:bg-slate-800 text-white shadow-sm border border-slate-900 focus:ring-slate-900',
@@ -23,9 +23,9 @@ export const Button = ({
   }
 
   const sizes = {
-    sm: 'px-3.5 py-2 text-xs gap-1.5',
+    sm: 'px-3.5 py-2 text-xs gap-2',
     md: 'px-5 py-2.5 text-sm gap-2',
-    lg: 'px-6 py-3.5 text-base gap-2.5'
+    lg: 'px-6 py-3.5 text-base gap-2'
   }
 
   return (
@@ -35,11 +35,13 @@ export const Button = ({
       {...props}
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-      ) : Icon ? (
-        <Icon className="w-4 h-4 shrink-0" />
-      ) : null}
-      <span>{children}</span>
+        <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+      ) : (
+        <>
+          {Icon && <Icon className="w-5 h-5 shrink-0" />}
+          <span className="inline-flex items-center gap-2">{children}</span>
+        </>
+      )}
     </button>
   )
 }
