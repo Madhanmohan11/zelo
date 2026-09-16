@@ -10,7 +10,8 @@ import {
   Plus,
   LogOut,
   Sparkles,
-  CheckSquare
+  CheckSquare,
+  ArrowLeft
 } from 'lucide-react'
 import zeloLogo from '../assets/Logo.png'
 import { useAuth } from '../context/AuthContext'
@@ -20,6 +21,7 @@ import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 export const AppLayout = () => {
   const { profile } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [quickAddTab, setQuickAddTab] = useState(null)
 
@@ -46,20 +48,36 @@ export const AppLayout = () => {
     }
   }
 
+  const isHomePage = location.pathname === '/today' || location.pathname === '/'
+
   return (
     <div className="min-h-screen ambient-bg text-slate-900 font-sans selection:bg-emerald-200 flex flex-col items-center">
       {/* CLEAN TOP HEADER — INCREASED HEIGHT & CENTER ALIGNED */}
       <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 pt-safe shadow-xs">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between min-h-[68px]">
-          {/* Left: ZELO Brand Logo */}
-          <NavLink to="/today" className="flex items-center my-auto" aria-label="ZELO Home">
-            <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-8.5 sm:h-9 w-auto object-contain max-w-[140px]" />
-          </NavLink>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between min-h-[80px] sm:min-h-[88px]">
+          {/* Left: Back Arrow (Non-home pages) + ZELO Brand Logo */}
+          <div className="flex items-center gap-2.5 sm:gap-3 my-auto">
+            {!isHomePage && (
+              <button
+                type="button"
+                onClick={() => navigate('/today')}
+                aria-label="Back to Home"
+                title="Back to Today"
+                className="p-2 -ml-1 rounded-xl text-slate-700 hover:text-emerald-700 hover:bg-slate-100/80 active:scale-95 transition-all flex items-center justify-center cursor-pointer border border-slate-200/60 shadow-2xs bg-white"
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-800" />
+              </button>
+            )}
 
-          {/* Right Action: Profile Avatar */}
+            <NavLink to="/today" className="flex items-center" aria-label="ZELO Home">
+              <img src={zeloLogo} alt="ZELO — Your day. Your way." className="h-9 sm:h-10 w-auto object-contain max-w-[150px]" />
+            </NavLink>
+          </div>
+
+          {/* Right Action: Profile Avatar (No Green Square Outer) */}
           <div className="flex items-center shrink-0 my-auto">
             <NavLink to="/profile" title="Profile" aria-label="Profile" className="flex items-center justify-center">
-              <ProfileAvatar size="sm" />
+              <ProfileAvatar size="md" />
             </NavLink>
           </div>
         </div>

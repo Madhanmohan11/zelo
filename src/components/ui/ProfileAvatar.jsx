@@ -60,7 +60,7 @@ export const ProfileAvatar = ({
 
   // Size styling maps
   const sizeMap = {
-    sm: 'w-8 h-8 text-xs',
+    sm: 'w-10 h-10 text-xs',
     md: 'w-12 h-12 text-sm',
     lg: 'w-24 h-24 text-2xl',
     xl: 'w-32 h-32 text-3xl'

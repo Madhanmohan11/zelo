@@ -59,15 +59,14 @@ export const ExpenseList = ({
   accounts = [],
   loading = false,
   onAddExpenseClick,
+  onEdit,
+  onDelete,
   onEditExpense,
   onDeleteExpense,
   categoryFilter = 'all',
   onCategoryFilterChange
 }) => {
-  const accountMap = accounts.reduce((acc, a) => {
-    acc[a.id] = a
-    return acc
-  }, {})
+  const accountMap = new Map((accounts || []).map((a) => [a.id, a]))
 
   const categories = ['all', 'Food', 'Transport', 'Shopping', 'Bills', 'Health', 'Entertainment', 'Education', 'Other']
 
@@ -158,7 +157,7 @@ export const ExpenseList = ({
               <div className="flex items-center gap-0.5">
                 <button
                   type="button"
-                  onClick={() => onEdit(exp)}
+                  onClick={() => (onEdit || onEditExpense)?.(exp)}
                   title="Edit expense"
                   className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
                 >
@@ -166,7 +165,7 @@ export const ExpenseList = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onDelete(exp)}
+                  onClick={() => (onDelete || onDeleteExpense)?.(exp)}
                   title="Delete expense"
                   className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
                 >
