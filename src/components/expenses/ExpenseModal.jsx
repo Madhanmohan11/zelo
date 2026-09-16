@@ -3,9 +3,10 @@ import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
-import { Wallet, AlertCircle } from 'lucide-react'
+import { Wallet, AlertCircle, Building2 } from 'lucide-react'
 import { formatINR } from '../../utils/formatters'
 import { getAccountDisplayLabel } from '../../services/accountService'
+import { GroupedAccountSelect } from './GroupedAccountSelect'
 
 export const ExpenseModal = ({
   isOpen,
@@ -13,6 +14,7 @@ export const ExpenseModal = ({
   onSave,
   editingExpense = null,
   accounts = [],
+  onAddCashAccount = null,
   isSubmitting = false
 }) => {
   const [amount, setAmount] = useState('')
@@ -53,12 +55,14 @@ export const ExpenseModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+    const cleanStr = String(amount || '').replace(/[^0-9.]/g, '')
+    const numAmount = parseFloat(cleanStr)
+    if (isNaN(numAmount) || numAmount <= 0) {
       return
     }
 
     onSave({
-      amount: parseFloat(amount),
+      amount: numAmount,
       category,
       description,
       spent_at: new Date(spentAt).toISOString(),
@@ -80,15 +84,15 @@ export const ExpenseModal = ({
         {/* AMOUNT INPUT - LARGE READABLE */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-            Amount (₹)
+            Amount (₹) *
           </label>
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xl font-black text-slate-500">
               ₹
             </span>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               placeholder="500"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -101,11 +105,6 @@ export const ExpenseModal = ({
 
         {/* PAYMENT ACCOUNT SELECTOR - PROMINENT WHERE MONEY IS DEDUCTED */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
-            <span>Payment Account</span>
-            <span className="text-[10px] text-emerald-700 font-semibold">Money will be reduced from here</span>
-          </label>
-
           {activeAccounts.length === 0 ? (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-800 font-medium">
               <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
@@ -113,21 +112,22 @@ export const ExpenseModal = ({
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="relative">
-                <Select
-                  value={accountId || (selectedAccount?.id || '')}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  options={activeAccounts.map((acc) => ({
-                    value: acc.id,
-                    label: `${getAccountDisplayLabel(acc)} — ${formatINR(acc.current_balance)}`
-                  }))}
-                />
-              </div>
+              <GroupedAccountSelect
+                label="Payment Account *"
+                accounts={accounts}
+                value={accountId}
+                onChange={(accId) => setAccountId(accId)}
+                onAddCashAccount={onAddCashAccount}
+              />
 
               {selectedAccount && (
-                <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs">
+                <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <Wallet className="w-4 h-4 text-emerald-600" />
+                    {selectedAccount.account_type === 'cash' ? (
+                      <Wallet className="w-4 h-4 text-amber-600" />
+                    ) : (
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                    )}
                     <span className="font-bold text-slate-800">{getAccountDisplayLabel(selectedAccount)}</span>
                   </div>
                   <div className="font-extrabold text-emerald-800">
@@ -194,3 +194,4 @@ export const ExpenseModal = ({
     </Modal>
   )
 }
+

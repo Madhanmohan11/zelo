@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { IndianRupee, Plus, SlidersHorizontal, BarChart3 } from 'lucide-react'
+import { IndianRupee, Plus, SlidersHorizontal, BarChart3, ShieldCheck } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -13,7 +13,8 @@ import {
   deactivateAccount,
   deleteAccount,
   addMoney,
-  transferMoney
+  transferMoney,
+  ensureDefaultCashAccount
 } from '../services/accountService'
 import { formatINR } from '../utils/formatters'
 
@@ -33,6 +34,7 @@ import { YearlyAnalysis } from '../components/expenses/YearlyAnalysis'
 import { DeleteExpenseModal } from '../components/expenses/DeleteExpenseModal'
 import { DeleteAccountModal } from '../components/expenses/DeleteAccountModal'
 import { DeactivateAccountModal } from '../components/expenses/DeactivateAccountModal'
+import { AddCashAccountModal } from '../components/expenses/AddCashAccountModal'
 
 export const ExpensesPage = () => {
   const { user } = useAuth()
@@ -71,6 +73,8 @@ export const ExpensesPage = () => {
 
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState(null)
+
+  const [isAddCashAccountModalOpen, setIsAddCashAccountModalOpen] = useState(false)
 
   const [isAccountDetailModalOpen, setIsAccountDetailModalOpen] = useState(false)
   const [detailAccount, setDetailAccount] = useState(null)
@@ -207,6 +211,40 @@ export const ExpensesPage = () => {
       showToast(err.message || 'Failed to save account', 'error')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleOpenAddCashAccount = () => {
+    setIsAddCashAccountModalOpen(true)
+  }
+
+  const handleSaveCashAccount = async (cashAccountData) => {
+    if (!user) return
+    setIsSubmitting(true)
+    try {
+      const createdAcc = await createAccount(user.id, cashAccountData)
+      showToast(`Created cash account "${cashAccountData.name}"`, 'success')
+      setIsAddCashAccountModalOpen(false)
+      await loadData()
+      if (createdAcc?.id) {
+        setAddMoneyAccountId(createdAcc.id)
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to create cash account', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleEnsureCashAccount = async () => {
+    if (!user) return null
+    try {
+      const acc = await ensureDefaultCashAccount(user.id, accounts)
+      await loadData()
+      return acc
+    } catch (err) {
+      console.error('Error in handleEnsureCashAccount:', err)
+      return null
     }
   }
 
@@ -369,14 +407,20 @@ export const ExpensesPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-700 font-extrabold border border-emerald-100/80 shadow-2xs mt-0.5 shrink-0">
-            <IndianRupee className="w-6 h-6 stroke-[2.5]" />
+            {activeTab === 'savings' ? (
+              <ShieldCheck className="w-6 h-6 stroke-[2.5]" />
+            ) : (
+              <IndianRupee className="w-6 h-6 stroke-[2.5]" />
+            )}
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">
-              Expense Manager
+              {activeTab === 'savings' ? 'Savings' : 'Expense Manager'}
             </h1>
             <p className="text-xs font-semibold text-slate-500 mt-0.5">
-              Track daily spending, categories, and monthly totals
+              {activeTab === 'savings'
+                ? 'Track your income, spending and grow your savings'
+                : 'Track daily spending, categories, and monthly totals'}
             </p>
           </div>
         </div>
@@ -488,14 +532,14 @@ export const ExpensesPage = () => {
         </div>
       )}
 
-      {/* STICKY BOTTOM ACTION BAR (DEDICATED FOR EXPENSE PAGE) */}
+      {/* STICKY BOTTOM ACTION BAR (DEDICATED FOR EXPENSE & SAVINGS PAGE) */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/60 p-2.5 pb-safe shadow-lg">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2 px-2">
           {/* 1. FILTER BUTTON */}
           <button
             type="button"
             onClick={() => {
-              const filterEl = document.getElementById('expense-filters-section')
+              const filterEl = document.getElementById(activeTab === 'savings' ? 'recent-activity-section' : 'expense-filters-section')
               if (filterEl) filterEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
             }}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-2xs border border-slate-200/90 transition-all active:scale-95 cursor-pointer"
@@ -504,21 +548,21 @@ export const ExpensesPage = () => {
             <span>Filter</span>
           </button>
 
-          {/* 2. PROMINENT ADD EXPENSE BUTTON */}
+          {/* 2. PROMINENT CENTER BUTTON (+ Add Money on Savings, + Add Expense on Expenses) */}
           <button
             type="button"
-            onClick={handleOpenAddExpense}
+            onClick={activeTab === 'savings' ? () => handleOpenAddMoney() : handleOpenAddExpense}
             className="flex-[1.4] flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4 text-white stroke-[2.5]" />
-            <span>Add Expense</span>
+            <span>{activeTab === 'savings' ? 'Add Money' : 'Add Expense'}</span>
           </button>
 
           {/* 3. SUMMARY BUTTON */}
           <button
             type="button"
             onClick={() => {
-              const summaryEl = document.getElementById('expense-analytics-section')
+              const summaryEl = document.getElementById(activeTab === 'savings' ? 'savings-analytics-section' : 'expense-analytics-section')
               if (summaryEl) summaryEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-2xs border border-slate-200/90 transition-all active:scale-95 cursor-pointer"
@@ -535,11 +579,14 @@ export const ExpensesPage = () => {
       {activeTab === 'savings' && (
         <AccountList
           accounts={accounts}
+          expenses={expenses}
           loading={loading}
+          userId={user?.id}
           onAccountClick={handleOpenAccountDetail}
           onAddAccountClick={handleOpenAddAccount}
           onAddMoneyClick={() => handleOpenAddMoney()}
           onTransferClick={() => handleOpenTransfer()}
+          onOpenEditExpense={handleOpenEditExpense}
         />
       )}
 
@@ -553,6 +600,7 @@ export const ExpensesPage = () => {
         onSave={handleSaveExpense}
         editingExpense={editingExpense}
         accounts={accounts}
+        onAddCashAccount={handleOpenAddCashAccount}
         isSubmitting={isSubmitting}
       />
 
@@ -562,6 +610,14 @@ export const ExpensesPage = () => {
         onClose={() => setIsAccountModalOpen(false)}
         onSave={handleSaveAccount}
         editingAccount={editingAccount}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* ADD CASH ACCOUNT MODAL */}
+      <AddCashAccountModal
+        isOpen={isAddCashAccountModalOpen}
+        onClose={() => setIsAddCashAccountModalOpen(false)}
+        onSave={handleSaveCashAccount}
         isSubmitting={isSubmitting}
       />
 
@@ -586,6 +642,9 @@ export const ExpensesPage = () => {
         onSave={handleSaveAddMoney}
         accounts={accounts}
         preselectedAccountId={addMoneyAccountId}
+        onAddCashAccount={handleOpenAddCashAccount}
+        onEnsureCashAccount={handleEnsureCashAccount}
+        userId={user?.id}
         isSubmitting={isSubmitting}
       />
 
@@ -596,6 +655,7 @@ export const ExpensesPage = () => {
         onSave={handleSaveTransfer}
         accounts={accounts}
         preselectedFromAccountId={transferFromAccountId}
+        onAddCashAccount={handleOpenAddCashAccount}
         isSubmitting={isSubmitting}
       />
 
@@ -629,3 +689,4 @@ export const ExpensesPage = () => {
     </div>
   )
 }
+
