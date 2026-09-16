@@ -864,3 +864,332 @@ export const deleteEvent = async (userId, eventId) => {
   return true
 }
 
+// -----------------------------------------------------------------------------
+// WATER LOGS SERVICE
+// -----------------------------------------------------------------------------
+export const getWaterLogs = async (userId, targetDate = null) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      let query = supabase.from('water_logs').select('*').eq('user_id', userId)
+      if (targetDate) {
+        query = query.eq('logged_date', targetDate)
+      }
+      const { data, error } = await query.order('created_at', { ascending: false })
+      if (!error && data) return data
+      console.warn('Supabase water_logs table error, using local fallback:', error?.message)
+    } catch (err) {
+      console.warn('Supabase getWaterLogs failed:', err.message)
+    }
+  }
+
+  let allLogs = getLocalData(`water_${userId}`, [])
+  if (targetDate) {
+    allLogs = allLogs.filter((w) => (w.logged_date || w.created_at || '').split('T')[0] === targetDate)
+  }
+  return allLogs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+}
+
+export const addWaterLog = async (userId, logData) => {
+  const newLog = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    amount_ml: parseInt(logData.amount_ml || 250),
+    logged_date: logData.logged_date || new Date().toISOString().split('T')[0],
+    logged_time: logData.logged_time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    created_at: new Date().toISOString()
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('water_logs').insert([newLog]).select().single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase addWaterLog failed:', err.message)
+    }
+  }
+
+  const allLogs = getLocalData(`water_${userId}`, [])
+  allLogs.push(newLog)
+  setLocalData(`water_${userId}`, allLogs)
+  return newLog
+}
+
+export const updateWaterLog = async (userId, logId, updates) => {
+  const payload = { ...updates, updated_at: new Date().toISOString() }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('water_logs')
+        .update(payload)
+        .eq('id', logId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase updateWaterLog failed:', err.message)
+    }
+  }
+
+  const allLogs = getLocalData(`water_${userId}`, [])
+  const index = allLogs.findIndex((w) => w.id === logId)
+  if (index !== -1) {
+    allLogs[index] = { ...allLogs[index], ...payload }
+    setLocalData(`water_${userId}`, allLogs)
+    return allLogs[index]
+  }
+  return payload
+}
+
+export const deleteWaterLog = async (userId, logId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase
+        .from('water_logs')
+        .delete()
+        .eq('id', logId)
+        .eq('user_id', userId)
+      if (!error) return true
+    } catch (err) {
+      console.warn('Supabase deleteWaterLog failed:', err.message)
+    }
+  }
+
+  let allLogs = getLocalData(`water_${userId}`, [])
+  allLogs = allLogs.filter((w) => w.id !== logId)
+  setLocalData(`water_${userId}`, allLogs)
+  return true
+}
+
+export const getWaterTarget = async (userId) => {
+  const target = localStorage.getItem(`zelo_water_target_${userId}`)
+  return target ? parseInt(target) : 2500
+}
+
+export const saveWaterTarget = async (userId, targetMl) => {
+  localStorage.setItem(`zelo_water_target_${userId}`, String(targetMl))
+  return parseInt(targetMl)
+}
+
+// -----------------------------------------------------------------------------
+// SLEEP LOGS SERVICE
+// -----------------------------------------------------------------------------
+export const getSleepLogs = async (userId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('sleep_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('sleep_date', { ascending: false })
+      if (!error && data) return data
+      console.warn('Supabase sleep_logs table error, using local fallback:', error?.message)
+    } catch (err) {
+      console.warn('Supabase getSleepLogs failed:', err.message)
+    }
+  }
+
+  return getLocalData(`sleep_${userId}`, []).sort(
+    (a, b) => new Date(b.sleep_date || b.created_at || 0) - new Date(a.sleep_date || a.created_at || 0)
+  )
+}
+
+export const addSleepLog = async (userId, logData) => {
+  const newLog = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    sleep_date: logData.sleep_date || new Date().toISOString().split('T')[0],
+    bedtime: logData.bedtime || '23:00',
+    wake_time: logData.wake_time || '07:00',
+    duration_hours: parseFloat(logData.duration_hours || 8.0),
+    quality: logData.quality || 'Good',
+    notes: logData.notes || '',
+    created_at: new Date().toISOString()
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('sleep_logs').insert([newLog]).select().single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase addSleepLog failed:', err.message)
+    }
+  }
+
+  const allLogs = getLocalData(`sleep_${userId}`, [])
+  allLogs.push(newLog)
+  setLocalData(`sleep_${userId}`, allLogs)
+  return newLog
+}
+
+export const updateSleepLog = async (userId, logId, updates) => {
+  const payload = { ...updates, updated_at: new Date().toISOString() }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('sleep_logs')
+        .update(payload)
+        .eq('id', logId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase updateSleepLog failed:', err.message)
+    }
+  }
+
+  const allLogs = getLocalData(`sleep_${userId}`, [])
+  const index = allLogs.findIndex((s) => s.id === logId)
+  if (index !== -1) {
+    allLogs[index] = { ...allLogs[index], ...payload }
+    setLocalData(`sleep_${userId}`, allLogs)
+    return allLogs[index]
+  }
+  return payload
+}
+
+export const deleteSleepLog = async (userId, logId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase
+        .from('sleep_logs')
+        .delete()
+        .eq('id', logId)
+        .eq('user_id', userId)
+      if (!error) return true
+    } catch (err) {
+      console.warn('Supabase deleteSleepLog failed:', err.message)
+    }
+  }
+
+  let allLogs = getLocalData(`sleep_${userId}`, [])
+  allLogs = allLogs.filter((s) => s.id !== logId)
+  setLocalData(`sleep_${userId}`, allLogs)
+  return true
+}
+
+export const getSleepTarget = async (userId) => {
+  const target = localStorage.getItem(`zelo_sleep_target_${userId}`)
+  return target ? parseFloat(target) : 8.0
+}
+
+export const saveSleepTarget = async (userId, targetHours) => {
+  localStorage.setItem(`zelo_sleep_target_${userId}`, String(targetHours))
+  return parseFloat(targetHours)
+}
+
+// -----------------------------------------------------------------------------
+// GOALS SERVICE
+// -----------------------------------------------------------------------------
+export const getGoals = async (userId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (!error && data) return data
+      console.warn('Supabase goals table error, using local fallback:', error?.message)
+    } catch (err) {
+      console.warn('Supabase getGoals failed:', err.message)
+    }
+  }
+
+  return getLocalData(`goals_${userId}`, []).sort(
+    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  )
+}
+
+export const createGoal = async (userId, goalData) => {
+  const progressPct = parseInt(goalData.progress_percentage || 0)
+  const status = progressPct >= 100 ? 'Completed' : goalData.status || 'In Progress'
+
+  const newGoal = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    title: goalData.title,
+    description: goalData.description || '',
+    category: goalData.category || 'Personal',
+    start_date: goalData.start_date || new Date().toISOString().split('T')[0],
+    target_date: goalData.target_date || null,
+    progress_percentage: progressPct,
+    status: status,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('goals').insert([newGoal]).select().single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase createGoal failed:', err.message)
+    }
+  }
+
+  const allGoals = getLocalData(`goals_${userId}`, [])
+  allGoals.push(newGoal)
+  setLocalData(`goals_${userId}`, allGoals)
+  return newGoal
+}
+
+export const updateGoal = async (userId, goalId, updates) => {
+  const payload = { ...updates, updated_at: new Date().toISOString() }
+  if (typeof updates.progress_percentage === 'number') {
+    if (updates.progress_percentage >= 100) {
+      payload.status = 'Completed'
+    } else if (payload.status === 'Completed' && updates.progress_percentage < 100) {
+      payload.status = 'In Progress'
+    }
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .update(payload)
+        .eq('id', goalId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase updateGoal failed:', err.message)
+    }
+  }
+
+  const allGoals = getLocalData(`goals_${userId}`, [])
+  const index = allGoals.findIndex((g) => g.id === goalId)
+  if (index !== -1) {
+    allGoals[index] = { ...allGoals[index], ...payload }
+    setLocalData(`goals_${userId}`, allGoals)
+    return allGoals[index]
+  }
+  return payload
+}
+
+export const deleteGoal = async (userId, goalId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', goalId)
+        .eq('user_id', userId)
+      if (!error) return true
+    } catch (err) {
+      console.warn('Supabase deleteGoal failed:', err.message)
+    }
+  }
+
+  let allGoals = getLocalData(`goals_${userId}`, [])
+  allGoals = allGoals.filter((g) => g.id !== goalId)
+  setLocalData(`goals_${userId}`, allGoals)
+  return true
+}
+
+

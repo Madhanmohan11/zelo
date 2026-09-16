@@ -18,6 +18,9 @@ import { WorkoutPage } from './pages/WorkoutPage'
 import { RememberPage } from './pages/RememberPage'
 import { ExpensesPage } from './pages/ExpensesPage'
 import { CalendarPage } from './pages/CalendarPage'
+import { WaterPage } from './pages/WaterPage'
+import { SleepPage } from './pages/SleepPage'
+import { GoalsPage } from './pages/GoalsPage'
 import { MorePage } from './pages/MorePage'
 import { CustomizeModulesPage } from './pages/CustomizeModulesPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -111,6 +114,9 @@ export function App() {
                 <Route path="/expenses" element={<ExpensesPage />} />
                 <Route path="/expenses/savings" element={<ExpensesPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/water" element={<WaterPage />} />
+                <Route path="/sleep" element={<SleepPage />} />
+                <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/more" element={<MorePage />} />
                 <Route path="/customize-modules" element={<CustomizeModulesPage />} />
                 <Route path="/settings/modules" element={<CustomizeModulesPage />} />
@@ -122,6 +128,7 @@ export function App() {
                 <Route path="/profile/security" element={<AccountSecurityPage />} />
                 <Route path="/settings" element={<Navigate to="/profile" replace />} />
               </Route>
+
 
               {/* Standalone ZELO Admin Panel Routes (Frontend-only setup before Supabase auth connection) */}
               <Route path="/admin" element={<AdminLayout />}>

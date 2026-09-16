@@ -71,7 +71,7 @@ export const MorePage = () => {
       description: 'Track your daily water intake',
       icon: Droplet,
       badgeBg: 'bg-cyan-50 text-cyan-600',
-      path: '/more'
+      path: '/water'
     },
     {
       id: 'sleep',
@@ -79,7 +79,7 @@ export const MorePage = () => {
       description: 'Monitor your sleep and rest',
       icon: Moon,
       badgeBg: 'bg-violet-50 text-violet-600',
-      path: '/more'
+      path: '/sleep'
     },
     {
       id: 'goals',
@@ -87,7 +87,7 @@ export const MorePage = () => {
       description: 'Set and track your life goals',
       icon: Target,
       badgeBg: 'bg-emerald-50 text-emerald-600',
-      path: '/more'
+      path: '/goals'
     }
   ]
 
