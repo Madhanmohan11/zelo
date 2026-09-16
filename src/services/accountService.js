@@ -180,6 +180,27 @@ export const deactivateAccount = async (userId, accountId) => {
 }
 
 // -----------------------------------------------------------------------------
+// DELETE ACCOUNT PERMANENTLY (For removing unused or redundant accounts)
+// -----------------------------------------------------------------------------
+export const deleteAccount = async (userId, accountId) => {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', accountId)
+      .eq('user_id', userId)
+
+    if (error) throw error
+    return true
+  }
+
+  const allAccounts = getLocalData(`accounts_${userId}`, [])
+  const filtered = allAccounts.filter((a) => a.id !== accountId)
+  setLocalData(`accounts_${userId}`, filtered)
+  return true
+}
+
+// -----------------------------------------------------------------------------
 // DYNAMIC ACCOUNT BALANCE CALCULATION ENGINE
 // -----------------------------------------------------------------------------
 export const recalculateAllAccountBalances = async (userId, accounts) => {

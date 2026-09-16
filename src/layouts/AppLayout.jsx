@@ -11,7 +11,8 @@ import {
   LogOut,
   Sparkles,
   CheckSquare,
-  ArrowLeft
+  ArrowLeft,
+  MoreVertical
 } from 'lucide-react'
 import zeloLogo from '../assets/Logo.png'
 import { useAuth } from '../context/AuthContext'
@@ -49,6 +50,7 @@ export const AppLayout = () => {
   }
 
   const isHomePage = location.pathname === '/today' || location.pathname === '/'
+  const isExpensesPage = location.pathname.startsWith('/expenses')
 
   return (
     <div className="min-h-screen ambient-bg text-slate-900 font-sans selection:bg-emerald-200 flex flex-col items-center">
@@ -74,87 +76,101 @@ export const AppLayout = () => {
             </NavLink>
           </div>
 
-          {/* Right Action: Profile Avatar (No Green Square Outer) */}
+          {/* Right Action: Three dots on Expense page, Profile Avatar on other pages */}
           <div className="flex items-center shrink-0 my-auto">
-            <NavLink to="/profile" title="Profile" aria-label="Profile" className="flex items-center justify-center">
-              <ProfileAvatar size="md" />
-            </NavLink>
+            {isExpensesPage ? (
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                title="Options"
+                aria-label="Options"
+                className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-700 transition-colors border border-slate-200/60 bg-white"
+              >
+                <MoreVertical className="w-5 h-5 text-slate-700" />
+              </button>
+            ) : (
+              <NavLink to="/profile" title="Profile" aria-label="Profile" className="flex items-center justify-center">
+                <ProfileAvatar size="md" />
+              </NavLink>
+            )}
           </div>
         </div>
       </header>
 
       {/* CENTERED MAIN CONTENT CONTAINER */}
-      <main className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-28 flex-1">
+      <main className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-28 sm:pb-32 flex-1">
         <Outlet context={{ openQuickAdd }} />
       </main>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR — ICON ONLY WITH CENTER + BUTTON */}
-      <nav
-        aria-label="Main Navigation"
-        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/70 z-40 pb-safe shadow-lg"
-      >
-        <div className="max-w-md mx-auto px-4 py-2 flex items-center justify-between relative">
-          {/* Left Navigation Icons (Home, Food) */}
-          <div className="flex items-center gap-2 flex-1 justify-around">
-            {navItemsLeft.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.path
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  aria-label={item.ariaLabel}
-                  title={item.title}
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
-                    isActive
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-100/80 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50 font-semibold'
-                  }`}
-                >
-                  <Icon className={`w-5.5 h-5.5 transition-transform ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
-                </NavLink>
-              )
-            })}
-          </div>
+      {/* MOBILE BOTTOM NAVIGATION BAR — HIDE ON EXPENSE MANAGER PAGE */}
+      {!isExpensesPage && (
+        <nav
+          aria-label="Main Navigation"
+          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/70 z-40 pb-safe shadow-lg"
+        >
+          <div className="max-w-md mx-auto px-4 py-2 flex items-center justify-between relative">
+            {/* Left Navigation Icons (Home, Food) */}
+            <div className="flex items-center gap-2 flex-1 justify-around">
+              {navItemsLeft.map((item) => {
+                const Icon = item.icon
+                const isActive = location.pathname === item.path
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    aria-label={item.ariaLabel}
+                    title={item.title}
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-100/80 shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50 font-semibold'
+                    }`}
+                  >
+                    <Icon className={`w-5.5 h-5.5 transition-transform ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
+                  </NavLink>
+                )
+              })}
+            </div>
 
-          {/* CENTER PROMINENT + QUICK ADD BUTTON */}
-          <div className="px-2 shrink-0">
-            <button
-              onClick={toggleQuickAdd}
-              aria-label="Add Entry"
-              title="Add Entry"
-              className={`w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/25 flex items-center justify-center transition-all transform active:scale-95 -translate-y-3.5 border-2 border-white ${
-                isQuickAddOpen ? 'rotate-45 bg-slate-800 shadow-slate-900/20' : ''
-              }`}
-            >
-              <Plus className="w-6 h-6 transition-transform" />
-            </button>
-          </div>
+            {/* CENTER PROMINENT + QUICK ADD BUTTON */}
+            <div className="px-2 shrink-0">
+              <button
+                onClick={toggleQuickAdd}
+                aria-label="Add Entry"
+                title="Add Entry"
+                className={`w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/25 flex items-center justify-center transition-all transform active:scale-95 -translate-y-3.5 border-2 border-white ${
+                  isQuickAddOpen ? 'rotate-45 bg-slate-800 shadow-slate-900/20' : ''
+                }`}
+              >
+                <Plus className="w-6 h-6 transition-transform" />
+              </button>
+            </div>
 
-          {/* Right Navigation Icons (Remember, Expenses) */}
-          <div className="flex items-center gap-2 flex-1 justify-around">
-            {navItemsRight.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.path
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  aria-label={item.ariaLabel}
-                  title={item.title}
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
-                    isActive
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-100/80 shadow-2xs'
-                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50 font-semibold'
-                  }`}
-                >
-                  <Icon className={`w-5.5 h-5.5 transition-transform ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
-                </NavLink>
-              )
-            })}
+            {/* Right Navigation Icons (Remember, Expenses) */}
+            <div className="flex items-center gap-2 flex-1 justify-around">
+              {navItemsRight.map((item) => {
+                const Icon = item.icon
+                const isActive = location.pathname === item.path
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    aria-label={item.ariaLabel}
+                    title={item.title}
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-100/80 shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50 font-semibold'
+                    }`}
+                  >
+                    <Icon className={`w-5.5 h-5.5 transition-transform ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
+                  </NavLink>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      )}
 
       {/* GLOBAL QUICK ADD MODAL / BOTTOM SHEET */}
       <QuickAddModal
