@@ -166,16 +166,16 @@ export const createWorkout = async (userId, workoutData, exercises = []) => {
     workout_exercises: []
   }
 
-  const preparedExercises = exercises.map((e) => ({
+  const preparedExercises = exercises.map((e, index) => ({
     id: crypto.randomUUID(),
     workout_id: workoutId,
     user_id: userId,
-    name: e.name,
+    exercise_name: e.name || e.exercise_name || 'Exercise',
     sets: parseInt(e.sets) || 3,
     reps: parseInt(e.reps) || 10,
-    weight_kg: parseFloat(e.weight_kg) || 0,
-    completed_sets: 0,
-    notes: e.notes || ''
+    weight: parseFloat(e.weight_kg || e.weight || 0),
+    completed: Boolean(e.completed),
+    sort_order: index
   }))
 
   newWorkout.workout_exercises = preparedExercises
@@ -768,12 +768,39 @@ export const getEvents = async (userId) => {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
-        .from('user_events')
+        .from('calendar_events')
         .select('*')
         .eq('user_id', userId)
-        .order('event_date', { ascending: true })
-      if (!error && data) return data
-      console.warn('Supabase user_events table error, using local fallback:', error?.message)
+        .order('start_at', { ascending: true })
+
+      if (!error && data) {
+        return data.map((item) => {
+          const startDate = item.start_at ? item.start_at.split('T')[0] : ''
+          const startTime = item.start_at && item.start_at.includes('T')
+            ? item.start_at.split('T')[1].substring(0, 5)
+            : '09:00'
+          const endTime = item.end_at && item.end_at.includes('T')
+            ? item.end_at.split('T')[1].substring(0, 5)
+            : '10:00'
+
+          return {
+            id: item.id,
+            user_id: item.user_id,
+            title: item.title,
+            event_date: startDate,
+            start_time: startTime,
+            end_time: endTime,
+            is_all_day: Boolean(item.all_day),
+            category: item.color || 'Personal',
+            location: item.location || '',
+            notes: item.description || '',
+            status: 'pending',
+            created_at: item.created_at,
+            updated_at: item.updated_at
+          }
+        })
+      }
+      console.warn('Supabase calendar_events table error, using local fallback:', error?.message)
     } catch (err) {
       console.warn('Supabase getEvents failed:', err.message)
     }
@@ -785,44 +812,80 @@ export const getEvents = async (userId) => {
 }
 
 export const createEvent = async (userId, eventData) => {
-  const newEvent = {
+  const eventDate = eventData.event_date || new Date().toISOString().split('T')[0]
+  const startTime = eventData.start_time || '09:00'
+  const endTime = eventData.end_time || '10:00'
+
+  const startAt = new Date(`${eventDate}T${startTime}:00`).toISOString()
+  const endAt = new Date(`${eventDate}T${endTime}:00`).toISOString()
+
+  const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
     title: eventData.title,
-    event_date: eventData.event_date || new Date().toISOString().split('T')[0],
-    start_time: eventData.start_time || '09:00',
-    end_time: eventData.end_time || '10:00',
-    is_all_day: eventData.is_all_day ?? false,
+    description: eventData.notes || eventData.description || '',
+    start_at: startAt,
+    end_at: endAt,
+    location: eventData.location || '',
+    all_day: Boolean(eventData.is_all_day),
+    color: eventData.category || 'Personal'
+  }
+
+  const localItem = {
+    id: dbPayload.id,
+    user_id: userId,
+    title: eventData.title,
+    event_date: eventDate,
+    start_time: startTime,
+    end_time: endTime,
+    is_all_day: Boolean(eventData.is_all_day),
     category: eventData.category || 'Personal',
     location: eventData.location || '',
     notes: eventData.notes || '',
-    status: eventData.status || 'pending',
+    status: 'pending',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('user_events').insert([newEvent]).select().single()
-      if (!error && data) return data
+      const { data, error } = await supabase.from('calendar_events').insert([dbPayload]).select().single()
+      if (!error && data) return localItem
     } catch (err) {
       console.warn('Supabase createEvent failed:', err.message)
     }
   }
 
   const allEvents = getLocalData(`events_${userId}`, [])
-  allEvents.push(newEvent)
+  allEvents.push(localItem)
   setLocalData(`events_${userId}`, allEvents)
-  return newEvent
+  return localItem
 }
 
 export const updateEvent = async (userId, eventId, updates) => {
-  const payload = { ...updates, updated_at: new Date().toISOString() }
+  const payload = { updated_at: new Date().toISOString() }
+
+  if (updates.title) payload.title = updates.title
+  if (updates.notes || updates.description) payload.description = updates.notes || updates.description
+  if (updates.location !== undefined) payload.location = updates.location
+  if (updates.is_all_day !== undefined) payload.all_day = Boolean(updates.is_all_day)
+  if (updates.category) payload.color = updates.category
+
+  if (updates.event_date || updates.start_time) {
+    const eDate = updates.event_date || new Date().toISOString().split('T')[0]
+    const sTime = updates.start_time || '09:00'
+    payload.start_at = new Date(`${eDate}T${sTime}:00`).toISOString()
+  }
+  if (updates.event_date || updates.end_time) {
+    const eDate = updates.event_date || new Date().toISOString().split('T')[0]
+    const eTime = updates.end_time || '10:00'
+    payload.end_at = new Date(`${eDate}T${eTime}:00`).toISOString()
+  }
 
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
-        .from('user_events')
+        .from('calendar_events')
         .update(payload)
         .eq('id', eventId)
         .eq('user_id', userId)
@@ -837,7 +900,7 @@ export const updateEvent = async (userId, eventId, updates) => {
   const allEvents = getLocalData(`events_${userId}`, [])
   const index = allEvents.findIndex((e) => e.id === eventId)
   if (index !== -1) {
-    allEvents[index] = { ...allEvents[index], ...payload }
+    allEvents[index] = { ...allEvents[index], ...updates, updated_at: new Date().toISOString() }
     setLocalData(`events_${userId}`, allEvents)
     return allEvents[index]
   }
@@ -848,7 +911,7 @@ export const deleteEvent = async (userId, eventId) => {
   if (isSupabaseConfigured && supabase) {
     try {
       const { error } = await supabase
-        .from('user_events')
+        .from('calendar_events')
         .delete()
         .eq('id', eventId)
         .eq('user_id', userId)
@@ -867,15 +930,27 @@ export const deleteEvent = async (userId, eventId) => {
 // -----------------------------------------------------------------------------
 // WATER LOGS SERVICE
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// WATER LOGS SERVICE
+// -----------------------------------------------------------------------------
 export const getWaterLogs = async (userId, targetDate = null) => {
   if (isSupabaseConfigured && supabase) {
     try {
       let query = supabase.from('water_logs').select('*').eq('user_id', userId)
       if (targetDate) {
-        query = query.eq('logged_date', targetDate)
+        query = query.gte('logged_at', `${targetDate}T00:00:00.000Z`).lte('logged_at', `${targetDate}T23:59:59.999Z`)
       }
-      const { data, error } = await query.order('created_at', { ascending: false })
-      if (!error && data) return data
+      const { data, error } = await query.order('logged_at', { ascending: false })
+      if (!error && data) {
+        return data.map((item) => ({
+          id: item.id,
+          user_id: item.user_id,
+          amount_ml: item.amount_ml,
+          logged_date: item.logged_at ? item.logged_at.split('T')[0] : targetDate,
+          logged_time: item.logged_at && item.logged_at.includes('T') ? item.logged_at.split('T')[1].substring(0, 5) : '12:00',
+          created_at: item.created_at || item.logged_at
+        }))
+      }
       console.warn('Supabase water_logs table error, using local fallback:', error?.message)
     } catch (err) {
       console.warn('Supabase getWaterLogs failed:', err.message)
@@ -890,32 +965,48 @@ export const getWaterLogs = async (userId, targetDate = null) => {
 }
 
 export const addWaterLog = async (userId, logData) => {
-  const newLog = {
+  const lDate = logData.logged_date || new Date().toISOString().split('T')[0]
+  const lTime = logData.logged_time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  const loggedAt = new Date(`${lDate}T${lTime.length === 5 ? lTime : '12:00'}:00`).toISOString()
+
+  const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
     amount_ml: parseInt(logData.amount_ml || 250),
-    logged_date: logData.logged_date || new Date().toISOString().split('T')[0],
-    logged_time: logData.logged_time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    logged_at: loggedAt
+  }
+
+  const localLog = {
+    ...dbPayload,
+    logged_date: lDate,
+    logged_time: lTime,
     created_at: new Date().toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('water_logs').insert([newLog]).select().single()
-      if (!error && data) return data
+      const { data, error } = await supabase.from('water_logs').insert([dbPayload]).select().single()
+      if (!error && data) return localLog
     } catch (err) {
       console.warn('Supabase addWaterLog failed:', err.message)
     }
   }
 
   const allLogs = getLocalData(`water_${userId}`, [])
-  allLogs.push(newLog)
+  allLogs.push(localLog)
   setLocalData(`water_${userId}`, allLogs)
-  return newLog
+  return localLog
 }
 
 export const updateWaterLog = async (userId, logId, updates) => {
-  const payload = { ...updates, updated_at: new Date().toISOString() }
+  const payload = { updated_at: new Date().toISOString() }
+
+  if (updates.amount_ml) payload.amount_ml = parseInt(updates.amount_ml)
+  if (updates.logged_date || updates.logged_time) {
+    const lDate = updates.logged_date || new Date().toISOString().split('T')[0]
+    const lTime = updates.logged_time || '12:00'
+    payload.logged_at = new Date(`${lDate}T${lTime}:00`).toISOString()
+  }
 
   if (isSupabaseConfigured && supabase) {
     try {
@@ -935,7 +1026,7 @@ export const updateWaterLog = async (userId, logId, updates) => {
   const allLogs = getLocalData(`water_${userId}`, [])
   const index = allLogs.findIndex((w) => w.id === logId)
   if (index !== -1) {
-    allLogs[index] = { ...allLogs[index], ...payload }
+    allLogs[index] = { ...allLogs[index], ...updates }
     setLocalData(`water_${userId}`, allLogs)
     return allLogs[index]
   }
@@ -982,8 +1073,34 @@ export const getSleepLogs = async (userId) => {
         .from('sleep_logs')
         .select('*')
         .eq('user_id', userId)
-        .order('sleep_date', { ascending: false })
-      if (!error && data) return data
+        .order('sleep_start', { ascending: false })
+      if (!error && data) {
+        return data.map((item) => {
+          const startDate = item.sleep_start ? item.sleep_start.split('T')[0] : ''
+          const startTime = item.sleep_start && item.sleep_start.includes('T')
+            ? item.sleep_start.split('T')[1].substring(0, 5)
+            : '23:00'
+          const endTime = item.sleep_end && item.sleep_end.includes('T')
+            ? item.sleep_end.split('T')[1].substring(0, 5)
+            : '07:00'
+          const durationHours = item.duration_minutes ? Math.round((item.duration_minutes / 60) * 10) / 10 : 8.0
+
+          const qualityMap = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very Good', 5: 'Excellent' }
+          const qualityStr = typeof item.quality === 'number' ? (qualityMap[item.quality] || 'Good') : (item.quality || 'Good')
+
+          return {
+            id: item.id,
+            user_id: item.user_id,
+            sleep_date: startDate,
+            bedtime: startTime,
+            wake_time: endTime,
+            duration_hours: durationHours,
+            quality: qualityStr,
+            notes: item.notes || '',
+            created_at: item.created_at
+          }
+        })
+      }
       console.warn('Supabase sleep_logs table error, using local fallback:', error?.message)
     } catch (err) {
       console.warn('Supabase getSleepLogs failed:', err.message)
@@ -996,13 +1113,40 @@ export const getSleepLogs = async (userId) => {
 }
 
 export const addSleepLog = async (userId, logData) => {
-  const newLog = {
+  const sDate = logData.sleep_date || new Date().toISOString().split('T')[0]
+  const bTime = logData.bedtime || '23:00'
+  const wTime = logData.wake_time || '07:00'
+
+  const sleepStart = new Date(`${sDate}T${bTime}:00`)
+  let sleepEnd = new Date(`${sDate}T${wTime}:00`)
+  if (sleepEnd <= sleepStart) {
+    sleepEnd.setDate(sleepEnd.getDate() + 1)
+  }
+
+  const durationMinutes = Math.max(0, Math.round((sleepEnd.getTime() - sleepStart.getTime()) / 60000))
+
+  const qualityStringMap = { 'Poor': 1, 'Fair': 2, 'Good': 3, 'Very Good': 4, 'Excellent': 5 }
+  const qualityNum = typeof logData.quality === 'number'
+    ? logData.quality
+    : (qualityStringMap[logData.quality] || 3)
+
+  const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
-    sleep_date: logData.sleep_date || new Date().toISOString().split('T')[0],
-    bedtime: logData.bedtime || '23:00',
-    wake_time: logData.wake_time || '07:00',
-    duration_hours: parseFloat(logData.duration_hours || 8.0),
+    sleep_start: sleepStart.toISOString(),
+    sleep_end: sleepEnd.toISOString(),
+    duration_minutes: durationMinutes,
+    quality: qualityNum,
+    notes: logData.notes || ''
+  }
+
+  const localLog = {
+    id: dbPayload.id,
+    user_id: userId,
+    sleep_date: sDate,
+    bedtime: bTime,
+    wake_time: wTime,
+    duration_hours: Math.round((durationMinutes / 60) * 10) / 10,
     quality: logData.quality || 'Good',
     notes: logData.notes || '',
     created_at: new Date().toISOString()
@@ -1010,21 +1154,45 @@ export const addSleepLog = async (userId, logData) => {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('sleep_logs').insert([newLog]).select().single()
-      if (!error && data) return data
+      const { data, error } = await supabase.from('sleep_logs').insert([dbPayload]).select().single()
+      if (!error && data) return localLog
     } catch (err) {
       console.warn('Supabase addSleepLog failed:', err.message)
     }
   }
 
   const allLogs = getLocalData(`sleep_${userId}`, [])
-  allLogs.push(newLog)
+  allLogs.push(localLog)
   setLocalData(`sleep_${userId}`, allLogs)
-  return newLog
+  return localLog
 }
 
 export const updateSleepLog = async (userId, logId, updates) => {
-  const payload = { ...updates, updated_at: new Date().toISOString() }
+  const payload = { updated_at: new Date().toISOString() }
+
+  if (updates.notes !== undefined) payload.notes = updates.notes
+  if (updates.quality) {
+    const qualityStringMap = { 'Poor': 1, 'Fair': 2, 'Good': 3, 'Very Good': 4, 'Excellent': 5 }
+    payload.quality = typeof updates.quality === 'number'
+      ? updates.quality
+      : (qualityStringMap[updates.quality] || 3)
+  }
+
+  if (updates.sleep_date || updates.bedtime || updates.wake_time) {
+    const sDate = updates.sleep_date || new Date().toISOString().split('T')[0]
+    const bTime = updates.bedtime || '23:00'
+    const wTime = updates.wake_time || '07:00'
+
+    const sleepStart = new Date(`${sDate}T${bTime}:00`)
+    let sleepEnd = new Date(`${sDate}T${wTime}:00`)
+    if (sleepEnd <= sleepStart) {
+      sleepEnd.setDate(sleepEnd.getDate() + 1)
+    }
+
+    payload.sleep_start = sleepStart.toISOString()
+    payload.sleep_end = sleepEnd.toISOString()
+    payload.duration_minutes = Math.max(0, Math.round((sleepEnd.getTime() - sleepStart.getTime()) / 60000))
+  }
 
   if (isSupabaseConfigured && supabase) {
     try {
@@ -1044,7 +1212,7 @@ export const updateSleepLog = async (userId, logId, updates) => {
   const allLogs = getLocalData(`sleep_${userId}`, [])
   const index = allLogs.findIndex((s) => s.id === logId)
   if (index !== -1) {
-    allLogs[index] = { ...allLogs[index], ...payload }
+    allLogs[index] = { ...allLogs[index], ...updates }
     setLocalData(`sleep_${userId}`, allLogs)
     return allLogs[index]
   }
@@ -1092,7 +1260,35 @@ export const getGoals = async (userId) => {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-      if (!error && data) return data
+      if (!error && data) {
+        return data.map((g) => {
+          const target = g.target_value || 100
+          const current = g.current_value || 0
+          const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
+
+          const statusMap = {
+            'active': pct > 0 ? 'In Progress' : 'Not Started',
+            'completed': 'Completed',
+            'paused': 'Paused',
+            'cancelled': 'Cancelled'
+          }
+          const statusStr = statusMap[g.status] || 'In Progress'
+
+          return {
+            id: g.id,
+            user_id: g.user_id,
+            title: g.title,
+            description: g.description || '',
+            category: g.category || 'Personal',
+            start_date: g.start_date,
+            target_date: g.target_date,
+            progress_percentage: pct,
+            status: statusStr,
+            created_at: g.created_at,
+            updated_at: g.updated_at
+          }
+        })
+      }
       console.warn('Supabase goals table error, using local fallback:', error?.message)
     } catch (err) {
       console.warn('Supabase getGoals failed:', err.message)
@@ -1105,46 +1301,85 @@ export const getGoals = async (userId) => {
 }
 
 export const createGoal = async (userId, goalData) => {
-  const progressPct = parseInt(goalData.progress_percentage || 0)
-  const status = progressPct >= 100 ? 'Completed' : goalData.status || 'In Progress'
+  const progressPct = Math.min(100, Math.max(0, parseInt(goalData.progress_percentage || 0)))
 
-  const newGoal = {
+  let dbStatus = 'active'
+  if (progressPct >= 100 || goalData.status === 'Completed') {
+    dbStatus = 'completed'
+  } else if (goalData.status === 'Paused') {
+    dbStatus = 'paused'
+  } else if (goalData.status === 'Cancelled') {
+    dbStatus = 'cancelled'
+  }
+
+  const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
     title: goalData.title,
     description: goalData.description || '',
     category: goalData.category || 'Personal',
+    target_value: 100,
+    current_value: progressPct,
+    unit: '%',
     start_date: goalData.start_date || new Date().toISOString().split('T')[0],
     target_date: goalData.target_date || null,
+    status: dbStatus
+  }
+
+  const localGoal = {
+    id: dbPayload.id,
+    user_id: userId,
+    title: goalData.title,
+    description: goalData.description || '',
+    category: goalData.category || 'Personal',
+    start_date: dbPayload.start_date,
+    target_date: dbPayload.target_date,
     progress_percentage: progressPct,
-    status: status,
+    status: progressPct >= 100 ? 'Completed' : (goalData.status || 'In Progress'),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('goals').insert([newGoal]).select().single()
-      if (!error && data) return data
+      const { data, error } = await supabase.from('goals').insert([dbPayload]).select().single()
+      if (!error && data) return localGoal
     } catch (err) {
       console.warn('Supabase createGoal failed:', err.message)
     }
   }
 
   const allGoals = getLocalData(`goals_${userId}`, [])
-  allGoals.push(newGoal)
+  allGoals.push(localGoal)
   setLocalData(`goals_${userId}`, allGoals)
-  return newGoal
+  return localGoal
 }
 
 export const updateGoal = async (userId, goalId, updates) => {
-  const payload = { ...updates, updated_at: new Date().toISOString() }
+  const payload = { updated_at: new Date().toISOString() }
+
+  if (updates.title) payload.title = updates.title
+  if (updates.description !== undefined) payload.description = updates.description
+  if (updates.category) payload.category = updates.category
+  if (updates.start_date) payload.start_date = updates.start_date
+  if (updates.target_date !== undefined) payload.target_date = updates.target_date
+
   if (typeof updates.progress_percentage === 'number') {
-    if (updates.progress_percentage >= 100) {
-      payload.status = 'Completed'
-    } else if (payload.status === 'Completed' && updates.progress_percentage < 100) {
-      payload.status = 'In Progress'
+    const pct = Math.min(100, Math.max(0, updates.progress_percentage))
+    payload.current_value = pct
+    payload.target_value = 100
+    if (pct >= 100) {
+      payload.status = 'completed'
+    } else if (payload.status === 'completed' || updates.status === 'In Progress') {
+      payload.status = 'active'
     }
+  }
+
+  if (updates.status) {
+    if (updates.status === 'Completed') payload.status = 'completed'
+    else if (updates.status === 'Paused') payload.status = 'paused'
+    else if (updates.status === 'Cancelled') payload.status = 'cancelled'
+    else if (updates.status === 'In Progress' || updates.status === 'Not Started') payload.status = 'active'
   }
 
   if (isSupabaseConfigured && supabase) {
@@ -1165,7 +1400,7 @@ export const updateGoal = async (userId, goalId, updates) => {
   const allGoals = getLocalData(`goals_${userId}`, [])
   const index = allGoals.findIndex((g) => g.id === goalId)
   if (index !== -1) {
-    allGoals[index] = { ...allGoals[index], ...payload }
+    allGoals[index] = { ...allGoals[index], ...updates, updated_at: new Date().toISOString() }
     setLocalData(`goals_${userId}`, allGoals)
     return allGoals[index]
   }
