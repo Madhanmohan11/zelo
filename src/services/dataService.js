@@ -760,3 +760,107 @@ export const deleteTask = async (userId, taskId) => {
   setLocalData(`tasks_${userId}`, allTasks)
   return true
 }
+
+// -----------------------------------------------------------------------------
+// PERSONAL EVENTS SERVICE
+// -----------------------------------------------------------------------------
+export const getEvents = async (userId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('user_events')
+        .select('*')
+        .eq('user_id', userId)
+        .order('event_date', { ascending: true })
+      if (!error && data) return data
+      console.warn('Supabase user_events table error, using local fallback:', error?.message)
+    } catch (err) {
+      console.warn('Supabase getEvents failed:', err.message)
+    }
+  }
+
+  return getLocalData(`events_${userId}`, []).sort(
+    (a, b) => new Date(a.event_date || 0) - new Date(b.event_date || 0)
+  )
+}
+
+export const createEvent = async (userId, eventData) => {
+  const newEvent = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    title: eventData.title,
+    event_date: eventData.event_date || new Date().toISOString().split('T')[0],
+    start_time: eventData.start_time || '09:00',
+    end_time: eventData.end_time || '10:00',
+    is_all_day: eventData.is_all_day ?? false,
+    category: eventData.category || 'Personal',
+    location: eventData.location || '',
+    notes: eventData.notes || '',
+    status: eventData.status || 'pending',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('user_events').insert([newEvent]).select().single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase createEvent failed:', err.message)
+    }
+  }
+
+  const allEvents = getLocalData(`events_${userId}`, [])
+  allEvents.push(newEvent)
+  setLocalData(`events_${userId}`, allEvents)
+  return newEvent
+}
+
+export const updateEvent = async (userId, eventId, updates) => {
+  const payload = { ...updates, updated_at: new Date().toISOString() }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('user_events')
+        .update(payload)
+        .eq('id', eventId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase updateEvent failed:', err.message)
+    }
+  }
+
+  const allEvents = getLocalData(`events_${userId}`, [])
+  const index = allEvents.findIndex((e) => e.id === eventId)
+  if (index !== -1) {
+    allEvents[index] = { ...allEvents[index], ...payload }
+    setLocalData(`events_${userId}`, allEvents)
+    return allEvents[index]
+  }
+  return payload
+}
+
+export const deleteEvent = async (userId, eventId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase
+        .from('user_events')
+        .delete()
+        .eq('id', eventId)
+        .eq('user_id', userId)
+      if (!error) return true
+    } catch (err) {
+      console.warn('Supabase deleteEvent failed:', err.message)
+    }
+  }
+
+  let allEvents = getLocalData(`events_${userId}`, [])
+  allEvents = allEvents.filter((e) => e.id !== eventId)
+  setLocalData(`events_${userId}`, allEvents)
+  return true
+}
+
