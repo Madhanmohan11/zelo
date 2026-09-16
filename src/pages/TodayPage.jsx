@@ -13,7 +13,7 @@ import {
   updateRememberItem
 } from '../services/dataService'
 
-import { HomeHeader } from '../components/home/HomeHeader'
+import { DynamicHero } from '../components/home/DynamicHero'
 import { TodayOverview } from '../components/home/TodayOverview'
 import { TodaySchedule } from '../components/home/TodaySchedule'
 import { MoneySnapshot } from '../components/home/MoneySnapshot'
@@ -136,8 +136,14 @@ export const TodayPage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 max-w-2xl mx-auto pb-12">
-      {/* 1. HEADER SECTION */}
-      <HomeHeader userName={userName} />
+      {/* 1. DYNAMIC TIME-BASED HERO SECTION */}
+      <DynamicHero
+        userName={userName}
+        customSlogan={userSettings?.custom_slogan}
+        dynamicHeroEnabled={userSettings?.dynamic_hero_enabled ?? true}
+        autoTimeBgEnabled={userSettings?.auto_time_bg_enabled ?? true}
+        onSloganUpdated={() => loadDashboardData()}
+      />
 
       {/* 2. TODAY'S OVERVIEW (ENABLED MODULES GRID) */}
       <TodayOverview
