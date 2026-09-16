@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
-import { Select } from '../ui/Select'
 import { ArrowRight, AlertCircle } from 'lucide-react'
 import { formatINR } from '../../utils/formatters'
 import { getAccountDisplayLabel } from '../../services/accountService'
+import { GroupedAccountSelect } from './GroupedAccountSelect'
 
 export const TransferMoneyModal = ({
   isOpen,
@@ -13,6 +13,7 @@ export const TransferMoneyModal = ({
   onSave,
   accounts = [],
   preselectedFromAccountId = null,
+  onAddCashAccount = null,
   isSubmitting = false
 }) => {
   const [amount, setAmount] = useState('')
@@ -52,7 +53,9 @@ export const TransferMoneyModal = ({
     e.preventDefault()
     setErrorMsg('')
 
-    const numericAmount = parseFloat(amount)
+    const cleanStr = String(amount || '').replace(/[^0-9.]/g, '')
+    const numericAmount = parseFloat(cleanStr)
+
     if (isNaN(numericAmount) || numericAmount <= 0) {
       setErrorMsg('Please enter a valid transfer amount greater than 0')
       return
@@ -70,7 +73,11 @@ export const TransferMoneyModal = ({
 
     const sourceAccount = activeAccounts.find((a) => a.id === fromAccountId)
     if (sourceAccount && numericAmount > (sourceAccount.current_balance || 0)) {
-      setErrorMsg(`Transfer amount (₹${numericAmount}) exceeds source account balance (${formatINR(sourceAccount.current_balance)})`)
+      setErrorMsg(
+        `Transfer amount (${formatINR(numericAmount)}) exceeds source account balance (${formatINR(
+          sourceAccount.current_balance
+        )})`
+      )
       return
     }
 
@@ -85,6 +92,8 @@ export const TransferMoneyModal = ({
 
   const fromAcc = activeAccounts.find((a) => a.id === fromAccountId)
   const toAcc = activeAccounts.find((a) => a.id === toAccountId)
+  const cleanStr = String(amount || '').replace(/[^0-9.]/g, '')
+  const parsedAmount = parseFloat(cleanStr) || 0
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Transfer Money">
@@ -99,15 +108,15 @@ export const TransferMoneyModal = ({
         {/* AMOUNT INPUT */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-            Transfer Amount (₹)
+            Transfer Amount (₹) *
           </label>
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xl font-black text-slate-500">
               ₹
             </span>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               placeholder="2,000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -120,19 +129,13 @@ export const TransferMoneyModal = ({
 
         {/* FROM & TO ACCOUNTS */}
         <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              From (Source Account)
-            </label>
-            <Select
-              value={fromAccountId}
-              onChange={(e) => handleFromChange(e.target.value)}
-              options={activeAccounts.map((acc) => ({
-                value: acc.id,
-                label: `${getAccountDisplayLabel(acc)} — Balance: ${formatINR(acc.current_balance)}`
-              }))}
-            />
-          </div>
+          <GroupedAccountSelect
+            label="From (Source Account) *"
+            accounts={accounts}
+            value={fromAccountId}
+            onChange={handleFromChange}
+            onAddCashAccount={onAddCashAccount}
+          />
 
           <div className="flex justify-center my-1">
             <div className="p-1.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
@@ -140,36 +143,29 @@ export const TransferMoneyModal = ({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              To (Destination Account)
-            </label>
-            <Select
-              value={toAccountId}
-              onChange={(e) => setToAccountId(e.target.value)}
-              options={activeAccounts
-                .filter((acc) => acc.id !== fromAccountId)
-                .map((acc) => ({
-                  value: acc.id,
-                  label: `${getAccountDisplayLabel(acc)} — Balance: ${formatINR(acc.current_balance)}`
-                }))}
-            />
-          </div>
+          <GroupedAccountSelect
+            label="To (Destination Account) *"
+            accounts={accounts}
+            value={toAccountId}
+            onChange={(accId) => setToAccountId(accId)}
+            excludeAccountId={fromAccountId}
+            onAddCashAccount={onAddCashAccount}
+          />
         </div>
 
         {/* PREVIEW OF DEDUCTIONS */}
-        {fromAcc && toAcc && amount && !isNaN(amount) && (
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
-            <div className="flex justify-between text-slate-600">
-              <span>{getAccountDisplayLabel(fromAcc)} will become:</span>
-              <span className="font-bold text-slate-900">
-                {formatINR(Math.max(0, fromAcc.current_balance - parseFloat(amount)))}
+        {fromAcc && toAcc && parsedAmount > 0 && (
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5">
+            <div className="flex justify-between text-slate-600 font-medium">
+              <span>{getAccountDisplayLabel(fromAcc)} balance after transfer:</span>
+              <span className="font-extrabold text-slate-900">
+                {formatINR(Math.max(0, fromAcc.current_balance - parsedAmount))}
               </span>
             </div>
-            <div className="flex justify-between text-slate-600">
-              <span>{getAccountDisplayLabel(toAcc)} will become:</span>
-              <span className="font-bold text-slate-900">
-                {formatINR(toAcc.current_balance + parseFloat(amount))}
+            <div className="flex justify-between text-emerald-800 font-bold pt-1 border-t border-slate-200">
+              <span>{getAccountDisplayLabel(toAcc)} balance after transfer:</span>
+              <span className="font-extrabold text-emerald-700">
+                {formatINR((toAcc.current_balance || 0) + parsedAmount)}
               </span>
             </div>
           </div>
@@ -205,3 +201,4 @@ export const TransferMoneyModal = ({
     </Modal>
   )
 }
+
