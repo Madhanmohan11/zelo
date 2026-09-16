@@ -27,13 +27,13 @@ export const AppLayout = () => {
   const [quickAddTab, setQuickAddTab] = useState(null)
 
   const navItemsLeft = [
-    { path: '/workout', ariaLabel: 'Workout', title: 'Workout', icon: Dumbbell },
-    { path: '/food', ariaLabel: 'Food', title: 'Food', icon: Utensils },
+    { path: '/today', ariaLabel: 'Home', title: 'Home', icon: Sun },
+    { path: '/expenses', ariaLabel: 'Money', title: 'Money', icon: IndianRupee }
   ]
 
   const navItemsRight = [
-    { path: '/remember', ariaLabel: 'Remember', title: 'Remember', icon: Bookmark },
-    { path: '/expenses', ariaLabel: 'Expenses', title: 'Expenses', icon: IndianRupee },
+    { path: '/today', ariaLabel: 'Tasks', title: 'Tasks', icon: CheckSquare },
+    { path: '/more', ariaLabel: 'More', title: 'More', icon: MoreVertical }
   ]
 
   const openQuickAdd = (tab = 'expense') => {

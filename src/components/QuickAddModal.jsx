@@ -6,6 +6,7 @@ import { Select } from './ui/Select'
 import { Utensils, Dumbbell, Bookmark, IndianRupee } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useModulePreferences } from '../context/ModuleContext'
 import { createMeal, createWorkout, createRememberItem, createExpense } from '../services/dataService'
 import { getAccounts } from '../services/accountService'
 import { formatINR } from '../utils/formatters'
@@ -13,6 +14,7 @@ import { formatINR } from '../utils/formatters'
 export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = () => {} }) => {
   const { user } = useAuth()
   const { showToast } = useToast()
+  const { isModuleEnabled } = useModulePreferences()
   const [activeType, setActiveType] = useState('expense') // 'food', 'workout', 'remember', 'expense'
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -39,6 +41,13 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
 
   // Auto focus ref
   const focusInputRef = useRef(null)
+
+  const availableTypes = [
+    { id: 'expense', label: 'Expense', icon: IndianRupee, activeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200', enabled: true },
+    { id: 'remember', label: 'Remember', icon: Bookmark, activeBg: 'bg-purple-50 text-purple-800 border-purple-200', enabled: isModuleEnabled('remember') },
+    { id: 'food', label: 'Food', icon: Utensils, activeBg: 'bg-amber-50 text-amber-800 border-amber-200', enabled: isModuleEnabled('food') },
+    { id: 'workout', label: 'Workout', icon: Dumbbell, activeBg: 'bg-rose-50 text-rose-800 border-rose-200', enabled: isModuleEnabled('workout') }
+  ].filter((t) => t.enabled)
 
   useEffect(() => {
     if (defaultTab) {
@@ -131,18 +140,13 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
     }
   }
 
-  const types = [
-    { id: 'expense', label: 'Expense', icon: IndianRupee, activeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-    { id: 'remember', label: 'Remember', icon: Bookmark, activeBg: 'bg-purple-50 text-purple-800 border-purple-200' },
-    { id: 'food', label: 'Food', icon: Utensils, activeBg: 'bg-amber-50 text-amber-800 border-amber-200' },
-    { id: 'workout', label: 'Workout', icon: Dumbbell, activeBg: 'bg-rose-50 text-rose-800 border-rose-200' }
-  ]
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Quick Add to ZELO">
       {/* Selector Tabs */}
-      <div className="grid grid-cols-4 gap-2 mb-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/60">
-        {types.map((t) => {
+      <div className={`grid gap-2 mb-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/60 ${
+        availableTypes.length === 1 ? 'grid-cols-1' : availableTypes.length === 2 ? 'grid-cols-2' : availableTypes.length === 3 ? 'grid-cols-3' : 'grid-cols-4'
+      }`}>
+        {availableTypes.map((t) => {
           const Icon = t.icon
           const isActive = activeType === t.id
           return (

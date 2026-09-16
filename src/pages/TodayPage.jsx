@@ -28,13 +28,17 @@ import { RememberPreview } from '../components/home/RememberPreview'
 import { ExpenseSnapshot } from '../components/home/ExpenseSnapshot'
 import { HealthSnapshot } from '../components/home/HealthSnapshot'
 
+import { useModulePreferences } from '../context/ModuleContext'
+
 export const TodayPage = () => {
   const { user, profile, userSettings } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
   const { openQuickAdd } = useOutletContext() || {}
+  const { isModuleEnabled } = useModulePreferences()
 
   const [loading, setLoading] = useState(true)
+  const [showCustomizeBanner, setShowCustomizeBanner] = useState(true)
   const [todayMeals, setTodayMeals] = useState([])
   const [todayWorkouts, setTodayWorkouts] = useState([])
   const [rememberItems, setRememberItems] = useState([])
@@ -162,6 +166,37 @@ export const TodayPage = () => {
         </div>
       </div>
 
+      {/* OPTIONAL DISMISSIBLE CUSTOMIZE HOME BANNER */}
+      {showCustomizeBanner && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500 text-white rounded-xl shadow-2xs shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-slate-900">Make ZELO your own</h4>
+              <p className="text-[11px] font-medium text-slate-600">Choose the features you want to see on your dashboard.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => navigate('/customize-modules')}
+              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black transition-all shadow-2xs cursor-pointer"
+            >
+              Customize Home
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCustomizeBanner(false)}
+              className="p-1 text-slate-400 hover:text-slate-600 text-sm font-extrabold"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* MOBILE DAILY PROGRESS (VISIBLE AT THE TOP FOR MOBILE CLARITY) */}
       <div className="lg:hidden">
         <DailyProgress
@@ -202,20 +237,26 @@ export const TodayPage = () => {
           </div>
 
           {/* DON'T FORGET / REMEMBER PREVIEW */}
-          <RememberPreview
-            remembers={rememberItems}
-            onMarkCollected={handleMarkCollected}
-          />
+          {isModuleEnabled('remember') && (
+            <RememberPreview
+              remembers={rememberItems}
+              onMarkCollected={handleMarkCollected}
+            />
+          )}
 
-          {/* EXPENSE SNAPSHOT */}
-          <ExpenseSnapshot
-            expenses={todayExpenses}
-            spentTotal={todaySpentTotal}
-            budget={userSettings?.daily_expense_budget || 1000}
-          />
+          {/* EXPENSE SNAPSHOT (MONEY IS ALWAYS ENABLED) */}
+          {isModuleEnabled('money') && (
+            <ExpenseSnapshot
+              expenses={todayExpenses}
+              spentTotal={todaySpentTotal}
+              budget={userSettings?.daily_expense_budget || 1000}
+            />
+          )}
 
           {/* HEALTH SNAPSHOT */}
-          <HealthSnapshot userSettings={userSettings} />
+          {(isModuleEnabled('food') || isModuleEnabled('workout')) && (
+            <HealthSnapshot userSettings={userSettings} />
+          )}
         </div>
       </div>
     </div>
