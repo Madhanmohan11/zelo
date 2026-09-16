@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
-import { Edit2, Plus, ArrowLeftRight, Power, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { Edit2, Plus, ArrowLeftRight, Power, Trash2, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 import { formatINR } from '../../utils/formatters'
 import { getMoneyTransactions } from '../../services/accountService'
 
@@ -15,7 +15,8 @@ export const AccountDetailModal = ({
   onEditAccount,
   onAddMoney,
   onTransfer,
-  onDeactivateAccount
+  onDeactivateAccount,
+  onDeleteAccount
 }) => {
   const [transactions, setTransactions] = useState([])
   const [loadingTx, setLoadingTx] = useState(false)
@@ -108,17 +109,17 @@ export const AccountDetailModal = ({
         </Card>
 
         {/* QUICK ACTIONS */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => {
               onClose()
               onAddMoney(account.id)
             }}
-            className="flex flex-col items-center justify-center p-2.5 bg-emerald-50 text-emerald-800 rounded-xl hover:bg-emerald-100 transition-colors"
+            className="flex flex-col items-center justify-center p-2 sm:p-2.5 bg-emerald-50 text-emerald-800 rounded-xl hover:bg-emerald-100 transition-colors cursor-pointer"
           >
-            <Plus className="w-5 h-5 mb-1 text-emerald-600" />
-            <span className="text-[11px] font-bold">Add Money</span>
+            <Plus className="w-4.5 h-4.5 sm:w-5 sm:h-5 mb-1 text-emerald-600" />
+            <span className="text-[10px] sm:text-[11px] font-bold truncate">Add Money</span>
           </button>
 
           <button
@@ -127,10 +128,10 @@ export const AccountDetailModal = ({
               onClose()
               onTransfer(account.id)
             }}
-            className="flex flex-col items-center justify-center p-2.5 bg-blue-50 text-blue-800 rounded-xl hover:bg-blue-100 transition-colors"
+            className="flex flex-col items-center justify-center p-2 sm:p-2.5 bg-blue-50 text-blue-800 rounded-xl hover:bg-blue-100 transition-colors cursor-pointer"
           >
-            <ArrowLeftRight className="w-5 h-5 mb-1 text-blue-600" />
-            <span className="text-[11px] font-bold">Transfer</span>
+            <ArrowLeftRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 mb-1 text-blue-600" />
+            <span className="text-[10px] sm:text-[11px] font-bold truncate">Transfer</span>
           </button>
 
           <button
@@ -139,24 +140,34 @@ export const AccountDetailModal = ({
               onClose()
               onEditAccount(account)
             }}
-            className="flex flex-col items-center justify-center p-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors"
+            className="flex flex-col items-center justify-center p-2 sm:p-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
           >
-            <Edit2 className="w-5 h-5 mb-1 text-slate-600" />
-            <span className="text-[11px] font-bold">Edit</span>
+            <Edit2 className="w-4.5 h-4.5 sm:w-5 sm:h-5 mb-1 text-slate-600" />
+            <span className="text-[10px] sm:text-[11px] font-bold truncate">Edit</span>
           </button>
 
           <button
             type="button"
             onClick={() => {
-              if (window.confirm(`Deactivate account "${account.name}"? It will be hidden from new payment selectors but historical data will be preserved.`)) {
-                onClose()
-                onDeactivateAccount(account.id)
-              }
+              onClose()
+              if (onDeactivateAccount) onDeactivateAccount(account)
             }}
-            className="flex flex-col items-center justify-center p-2.5 bg-rose-50 text-rose-800 rounded-xl hover:bg-rose-100 transition-colors"
+            className="flex flex-col items-center justify-center p-2 sm:p-2.5 bg-amber-50 text-amber-800 rounded-xl hover:bg-amber-100 transition-colors cursor-pointer"
           >
-            <Power className="w-5 h-5 mb-1 text-rose-600" />
-            <span className="text-[11px] font-bold">Deactivate</span>
+            <Power className="w-4.5 h-4.5 sm:w-5 sm:h-5 mb-1 text-amber-600" />
+            <span className="text-[10px] sm:text-[11px] font-bold truncate">Deactivate</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose()
+              if (onDeleteAccount) onDeleteAccount(account)
+            }}
+            className="flex flex-col items-center justify-center p-2 sm:p-2.5 bg-rose-50 text-rose-800 rounded-xl hover:bg-rose-100 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-4.5 h-4.5 sm:w-5 sm:h-5 mb-1 text-rose-600" />
+            <span className="text-[10px] sm:text-[11px] font-bold truncate">Delete</span>
           </button>
         </div>
 

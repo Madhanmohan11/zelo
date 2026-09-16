@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { IndianRupee, Plus } from 'lucide-react'
+import { IndianRupee, Plus, SlidersHorizontal, BarChart3 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -11,6 +11,7 @@ import {
   createAccount,
   updateAccount,
   deactivateAccount,
+  deleteAccount,
   addMoney,
   transferMoney
 } from '../services/accountService'
@@ -30,6 +31,8 @@ import { TransferMoneyModal } from '../components/expenses/TransferMoneyModal'
 import { MonthlyAnalysis } from '../components/expenses/MonthlyAnalysis'
 import { YearlyAnalysis } from '../components/expenses/YearlyAnalysis'
 import { DeleteExpenseModal } from '../components/expenses/DeleteExpenseModal'
+import { DeleteAccountModal } from '../components/expenses/DeleteAccountModal'
+import { DeactivateAccountModal } from '../components/expenses/DeactivateAccountModal'
 
 export const ExpensesPage = () => {
   const { user } = useAuth()
@@ -80,6 +83,12 @@ export const ExpensesPage = () => {
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [deletingExpense, setDeletingExpense] = useState(null)
+
+  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(null)
+
+  const [isDeactivateAccountModalOpen, setIsDeactivateAccountModalOpen] = useState(false)
+  const [deactivatingAccount, setDeactivatingAccount] = useState(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -201,14 +210,45 @@ export const ExpensesPage = () => {
     }
   }
 
-  const handleDeactivateAccount = async (accountId) => {
-    if (!user) return
+  const handleOpenDeactivateAccountModal = (acc) => {
+    setDeactivatingAccount(acc)
+    setIsDeactivateAccountModalOpen(true)
+  }
+
+  const handleConfirmDeactivateAccount = async () => {
+    if (!user || !deactivatingAccount) return
+    setIsSubmitting(true)
     try {
-      await deactivateAccount(user.id, accountId)
-      showToast('Account deactivated', 'info')
+      await deactivateAccount(user.id, deactivatingAccount.id)
+      showToast(`Account "${deactivatingAccount.name}" deactivated`, 'info')
+      setIsDeactivateAccountModalOpen(false)
+      setDeactivatingAccount(null)
       await loadData()
     } catch (err) {
       showToast('Failed to deactivate account', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleOpenDeleteAccountModal = (acc) => {
+    setDeletingAccount(acc)
+    setIsDeleteAccountModalOpen(true)
+  }
+
+  const handleConfirmDeleteAccount = async () => {
+    if (!user || !deletingAccount) return
+    setIsSubmitting(true)
+    try {
+      await deleteAccount(user.id, deletingAccount.id)
+      showToast(`Account "${deletingAccount.name}" permanently deleted`, 'info')
+      setIsDeleteAccountModalOpen(false)
+      setDeletingAccount(null)
+      await loadData()
+    } catch (err) {
+      showToast(err.message || 'Failed to delete account', 'error')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -283,19 +323,20 @@ export const ExpensesPage = () => {
 
   const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 
-  const todayTotal = expenses
-    .filter((e) => (e.spent_at || '').split('T')[0] === todayStr)
-    .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  const todayExpenses = expenses.filter((e) => (e.spent_at || '').split('T')[0] === todayStr)
+  const todayTotal = todayExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  const todayCount = todayExpenses.length
 
-  const weekTotal = expenses
-    .filter((e) => (e.spent_at || '').split('T')[0] >= startOfWeekStr)
-    .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  const weekExpenses = expenses.filter((e) => (e.spent_at || '').split('T')[0] >= startOfWeekStr)
+  const weekTotal = weekExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  const weekCount = weekExpenses.length
 
-  const monthTotal = expenses
-    .filter((e) => (e.spent_at || '').split('T')[0] >= startOfMonthStr)
-    .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  const monthExpenses = expenses.filter((e) => (e.spent_at || '').split('T')[0] >= startOfMonthStr)
+  const monthTotal = monthExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  const monthCount = monthExpenses.length
 
   const totalSpending = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  const totalCount = expenses.length
 
   // Filtered expense list
   const filteredExpenses = expenses.filter((e) => {
@@ -323,20 +364,24 @@ export const ExpensesPage = () => {
   const accountMap = new Map(accounts.map((a) => [a.id, a]))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 sm:pb-28">
       {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <IndianRupee className="w-6 h-6 text-emerald-600" />
-            <span>Expense Manager</span>
-          </h1>
-          <p className="text-xs font-semibold text-slate-500 mt-0.5">
-            Track daily spending, categories, and monthly totals
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-700 font-extrabold border border-emerald-100/80 shadow-2xs mt-0.5 shrink-0">
+            <IndianRupee className="w-6 h-6 stroke-[2.5]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">
+              Expense Manager
+            </h1>
+            <p className="text-xs font-semibold text-slate-500 mt-0.5">
+              Track daily spending, categories, and monthly totals
+            </p>
+          </div>
         </div>
 
-        <div>
+        <div className="hidden sm:block">
           {activeTab === 'expenses' ? (
             <Button onClick={handleOpenAddExpense} variant="primary" icon={Plus}>
               Add Expense
@@ -359,26 +404,36 @@ export const ExpensesPage = () => {
          ----------------------------------------------------------------------- */}
       {activeTab === 'expenses' && (
         <div className="space-y-6">
-          {/* SUMMARY BAR */}
+          {/* SUMMARY CARDS */}
           <ExpenseSummary
             todayTotal={todayTotal}
+            todayCount={todayCount}
             weekTotal={weekTotal}
+            weekCount={weekCount}
             monthTotal={monthTotal}
+            monthCount={monthCount}
             totalSpending={totalSpending}
+            totalCount={totalCount}
           />
 
           {/* FILTERS BAR */}
-          <ExpenseFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            timeFilter={timeFilter}
-            onTimeFilterChange={setTimeFilter}
-            categoryFilter={categoryFilter}
-            onCategoryFilterChange={setCategoryFilter}
-            accountFilter={accountFilter}
-            onAccountFilterChange={setAccountFilter}
-            accounts={accounts}
-          />
+          <div id="expense-filters-section">
+            <ExpenseFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              timeFilter={timeFilter}
+              onTimeFilterChange={setTimeFilter}
+              categoryFilter={categoryFilter}
+              onCategoryFilterChange={setCategoryFilter}
+              accountFilter={accountFilter}
+              onAccountFilterChange={setAccountFilter}
+              accounts={accounts}
+              onToggleFilters={() => {
+                const searchEl = document.querySelector('input[placeholder*="Search"]')
+                if (searchEl) searchEl.focus()
+              }}
+            />
+          </div>
 
           {/* EXPENSES LIST */}
           <ExpenseList
@@ -391,7 +446,7 @@ export const ExpensesPage = () => {
           />
 
           {/* SPENDING ANALYTICS SECTION */}
-          <div className="pt-6 border-t border-slate-200">
+          <div id="expense-analytics-section" className="pt-6 border-t border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
                 Spending Analytics
@@ -432,6 +487,47 @@ export const ExpensesPage = () => {
           </div>
         </div>
       )}
+
+      {/* STICKY BOTTOM ACTION BAR (DEDICATED FOR EXPENSE PAGE) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/60 p-2.5 pb-safe shadow-lg">
+        <div className="max-w-md mx-auto flex items-center justify-between gap-2 px-2">
+          {/* 1. FILTER BUTTON */}
+          <button
+            type="button"
+            onClick={() => {
+              const filterEl = document.getElementById('expense-filters-section')
+              if (filterEl) filterEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-2xs border border-slate-200/90 transition-all active:scale-95 cursor-pointer"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-700" />
+            <span>Filter</span>
+          </button>
+
+          {/* 2. PROMINENT ADD EXPENSE BUTTON */}
+          <button
+            type="button"
+            onClick={handleOpenAddExpense}
+            className="flex-[1.4] flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-white stroke-[2.5]" />
+            <span>Add Expense</span>
+          </button>
+
+          {/* 3. SUMMARY BUTTON */}
+          <button
+            type="button"
+            onClick={() => {
+              const summaryEl = document.getElementById('expense-analytics-section')
+              if (summaryEl) summaryEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-2xs border border-slate-200/90 transition-all active:scale-95 cursor-pointer"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-slate-700" />
+            <span>Summary</span>
+          </button>
+        </div>
+      </div>
 
       {/* -----------------------------------------------------------------------
           SAVINGS TAB VIEW
@@ -479,7 +575,8 @@ export const ExpensesPage = () => {
         onEditAccount={handleOpenEditAccount}
         onAddMoney={(accId) => handleOpenAddMoney(accId)}
         onTransfer={(accId) => handleOpenTransfer(accId)}
-        onDeactivateAccount={handleDeactivateAccount}
+        onDeactivateAccount={handleOpenDeactivateAccountModal}
+        onDeleteAccount={handleOpenDeleteAccountModal}
       />
 
       {/* ADD MONEY MODAL */}
@@ -509,6 +606,24 @@ export const ExpensesPage = () => {
         onConfirm={handleConfirmDeleteExpense}
         expense={deletingExpense}
         account={deletingExpense ? accountMap.get(deletingExpense.account_id) : null}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* DELETE ACCOUNT CONFIRMATION MODAL */}
+      <DeleteAccountModal
+        isOpen={isDeleteAccountModalOpen}
+        onClose={() => setIsDeleteAccountModalOpen(false)}
+        onConfirm={handleConfirmDeleteAccount}
+        account={deletingAccount}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* DEACTIVATE ACCOUNT CONFIRMATION MODAL */}
+      <DeactivateAccountModal
+        isOpen={isDeactivateAccountModalOpen}
+        onClose={() => setIsDeactivateAccountModalOpen(false)}
+        onConfirm={handleConfirmDeactivateAccount}
+        account={deactivatingAccount}
         isSubmitting={isSubmitting}
       />
     </div>
