@@ -1,16 +1,11 @@
 import React, { useState } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  Sun,
-  Utensils,
-  Dumbbell,
-  Bookmark,
-  IndianRupee,
-  User,
+  Home,
+  Wallet,
+  ClipboardCheck,
+  LayoutGrid,
   Plus,
-  LogOut,
-  Sparkles,
-  CheckSquare,
   ArrowLeft,
   MoreVertical
 } from 'lucide-react'
@@ -27,13 +22,13 @@ export const AppLayout = () => {
   const [quickAddTab, setQuickAddTab] = useState(null)
 
   const navItemsLeft = [
-    { path: '/workout', ariaLabel: 'Workout', title: 'Workout', icon: Dumbbell },
-    { path: '/food', ariaLabel: 'Food', title: 'Food', icon: Utensils },
+    { path: '/today', ariaLabel: 'Home', title: 'Home', label: 'Home', icon: Home },
+    { path: '/expenses', ariaLabel: 'Money', title: 'Money', label: 'Money', icon: Wallet }
   ]
 
   const navItemsRight = [
-    { path: '/remember', ariaLabel: 'Remember', title: 'Remember', icon: Bookmark },
-    { path: '/expenses', ariaLabel: 'Expenses', title: 'Expenses', icon: IndianRupee },
+    { path: '/tasks', ariaLabel: 'Tasks', title: 'Tasks', label: 'Tasks', icon: ClipboardCheck },
+    { path: '/more', ariaLabel: 'More', title: 'More', label: 'More', icon: LayoutGrid }
   ]
 
   const openQuickAdd = (tab = 'expense') => {
@@ -106,64 +101,68 @@ export const AppLayout = () => {
       {!isExpensesPage && (
         <nav
           aria-label="Main Navigation"
-          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/70 z-40 pb-safe shadow-lg"
+          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 z-40 pb-safe shadow-lg"
         >
           <div className="max-w-md mx-auto px-4 py-2 flex items-center justify-between relative">
-            {/* Left Navigation Icons (Home, Food) */}
-            <div className="flex items-center gap-2 flex-1 justify-around">
+            {/* Left Navigation Items (Home, Money) */}
+            <div className="flex items-center justify-around flex-1">
               {navItemsLeft.map((item) => {
                 const Icon = item.icon
-                const isActive = location.pathname === item.path
+                const isActive = item.path === '/today'
+                  ? (location.pathname === '/today' || location.pathname === '/')
+                  : location.pathname.startsWith(item.path)
                 return (
                   <NavLink
-                    key={item.path}
+                    key={item.label}
                     to={item.path}
                     aria-label={item.ariaLabel}
                     title={item.title}
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                    className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
                       isActive
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-100/80 shadow-2xs'
-                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50 font-semibold'
+                        ? 'text-emerald-600 font-extrabold'
+                        : 'text-slate-400 hover:text-slate-600 font-medium'
                     }`}
                   >
-                    <Icon className={`w-5.5 h-5.5 transition-transform ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
+                    <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                    <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
                   </NavLink>
                 )
               })}
             </div>
 
             {/* CENTER PROMINENT + QUICK ADD BUTTON */}
-            <div className="px-2 shrink-0">
+            <div className="px-3 shrink-0 flex flex-col items-center">
               <button
                 onClick={toggleQuickAdd}
                 aria-label="Add Entry"
                 title="Add Entry"
-                className={`w-12 h-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/25 flex items-center justify-center transition-all transform active:scale-95 -translate-y-3.5 border-2 border-white ${
+                className={`w-13 h-13 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/35 flex items-center justify-center transition-all transform active:scale-95 -translate-y-4 border-2 border-white cursor-pointer ${
                   isQuickAddOpen ? 'rotate-45 bg-slate-800 shadow-slate-900/20' : ''
                 }`}
               >
-                <Plus className="w-6 h-6 transition-transform" />
+                <Plus className="w-7 h-7 stroke-[2.5] transition-transform" />
               </button>
             </div>
 
-            {/* Right Navigation Icons (Remember, Expenses) */}
-            <div className="flex items-center gap-2 flex-1 justify-around">
+            {/* Right Navigation Items (Tasks, More) */}
+            <div className="flex items-center justify-around flex-1">
               {navItemsRight.map((item) => {
                 const Icon = item.icon
-                const isActive = location.pathname === item.path
+                const isActive = location.pathname.startsWith(item.path)
                 return (
                   <NavLink
-                    key={item.path}
+                    key={item.label}
                     to={item.path}
                     aria-label={item.ariaLabel}
                     title={item.title}
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                    className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
                       isActive
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-100/80 shadow-2xs'
-                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50 font-semibold'
+                        ? 'text-emerald-600 font-extrabold'
+                        : 'text-slate-400 hover:text-slate-600 font-medium'
                     }`}
                   >
-                    <Icon className={`w-5.5 h-5.5 transition-transform ${isActive ? 'scale-110 text-emerald-700' : ''}`} />
+                    <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                    <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
                   </NavLink>
                 )
               })}
