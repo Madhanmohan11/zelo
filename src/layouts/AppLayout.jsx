@@ -27,7 +27,7 @@ export const AppLayout = () => {
   ]
 
   const navItemsRight = [
-    { path: '/remember', ariaLabel: 'Tasks', title: 'Tasks', label: 'Tasks', icon: ClipboardCheck },
+    { path: '/tasks', ariaLabel: 'Tasks', title: 'Tasks', label: 'Tasks', icon: ClipboardCheck },
     { path: '/more', ariaLabel: 'More', title: 'More', label: 'More', icon: LayoutGrid }
   ]
 

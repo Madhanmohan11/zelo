@@ -654,3 +654,109 @@ export const updateUserSettings = async (userId, settingsData) => {
   setLocalData(`settings_${userId}`, updated)
   return updated
 }
+
+// -----------------------------------------------------------------------------
+// TASKS SERVICE
+// -----------------------------------------------------------------------------
+export const getTasks = async (userId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (!error && data) return data
+      console.warn('Supabase tasks table error, using local fallback:', error?.message)
+    } catch (err) {
+      console.warn('Supabase getTasks failed:', err.message)
+    }
+  }
+
+  return getLocalData(`tasks_${userId}`, []).sort(
+    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  )
+}
+
+export const createTask = async (userId, taskData) => {
+  const newTask = {
+    id: crypto.randomUUID(),
+    user_id: userId,
+    title: taskData.title,
+    description: taskData.description || '',
+    due_date: taskData.due_date || null,
+    due_time: taskData.due_time || null,
+    priority: taskData.priority || 'normal',
+    status: taskData.status || 'pending',
+    completed_at: taskData.status === 'completed' ? new Date().toISOString() : null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('tasks').insert([newTask]).select().single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase createTask failed:', err.message)
+    }
+  }
+
+  const allTasks = getLocalData(`tasks_${userId}`, [])
+  allTasks.push(newTask)
+  setLocalData(`tasks_${userId}`, allTasks)
+  return newTask
+}
+
+export const updateTask = async (userId, taskId, updates) => {
+  const payload = { ...updates, updated_at: new Date().toISOString() }
+  if (updates.status === 'completed' && !updates.completed_at) {
+    payload.completed_at = new Date().toISOString()
+  } else if (updates.status && updates.status !== 'completed') {
+    payload.completed_at = null
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .update(payload)
+        .eq('id', taskId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn('Supabase updateTask failed:', err.message)
+    }
+  }
+
+  const allTasks = getLocalData(`tasks_${userId}`, [])
+  const index = allTasks.findIndex((t) => t.id === taskId)
+  if (index !== -1) {
+    allTasks[index] = { ...allTasks[index], ...payload }
+    setLocalData(`tasks_${userId}`, allTasks)
+    return allTasks[index]
+  }
+  return payload
+}
+
+export const deleteTask = async (userId, taskId) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+        .eq('user_id', userId)
+      if (!error) return true
+    } catch (err) {
+      console.warn('Supabase deleteTask failed:', err.message)
+    }
+  }
+
+  let allTasks = getLocalData(`tasks_${userId}`, [])
+  allTasks = allTasks.filter((t) => t.id !== taskId)
+  setLocalData(`tasks_${userId}`, allTasks)
+  return true
+}

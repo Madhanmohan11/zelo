@@ -46,7 +46,7 @@ export const TodayOverview = ({
       graphic: (
         <div className="w-5 h-5 rounded-full border-2 border-blue-400 border-t-blue-600 animate-spin-slow opacity-80" />
       ),
-      route: '/remember',
+      route: '/tasks',
       enabled: isModuleEnabled('tasks')
     },
     {

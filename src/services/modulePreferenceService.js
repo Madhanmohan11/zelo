@@ -24,7 +24,7 @@ export const ALL_MODULES = [
     description: 'Manage your daily to-do list and action items',
     defaultEnabled: true,
     locked: false,
-    route: '/today'
+    route: '/tasks'
   },
   {
     id: 'calendar',

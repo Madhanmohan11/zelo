@@ -8,6 +8,7 @@ import {
   getWorkouts,
   getRememberItems,
   getExpenses,
+  getTasks,
   updateMeal,
   updateWorkout,
   updateRememberItem
@@ -34,6 +35,7 @@ export const TodayPage = () => {
   const [todayWorkouts, setTodayWorkouts] = useState([])
   const [rememberItems, setRememberItems] = useState([])
   const [todayExpenses, setTodayExpenses] = useState([])
+  const [userTasks, setUserTasks] = useState([])
 
   const todayStr = new Date().toISOString().split('T')[0]
 
@@ -41,11 +43,12 @@ export const TodayPage = () => {
     if (!user) return
     setLoading(true)
     try {
-      const [meals, workouts, remembers, expenses] = await Promise.all([
+      const [meals, workouts, remembers, expenses, tasks] = await Promise.all([
         getMeals(user.id, todayStr),
         getWorkouts(user.id, todayStr),
         getRememberItems(user.id),
-        getExpenses(user.id)
+        getExpenses(user.id),
+        getTasks(user.id)
       ])
 
       setTodayMeals(meals || [])
@@ -61,6 +64,7 @@ export const TodayPage = () => {
         return spentDate === todayStr
       })
       setTodayExpenses(expensesToday)
+      setUserTasks(tasks || [])
     } catch (err) {
       console.error('Error loading dashboard data:', err)
       showToast('Failed to sync dashboard data', 'error')
@@ -148,8 +152,8 @@ export const TodayPage = () => {
       {/* 2. TODAY'S OVERVIEW (ENABLED MODULES GRID) */}
       <TodayOverview
         spentTotal={todaySpentTotal}
-        tasksCompleted={3}
-        tasksTotal={5}
+        tasksCompleted={userTasks.filter((t) => t.status === 'completed').length}
+        tasksTotal={userTasks.length}
         eventsTodayCount={0}
         rememberPendingCount={rememberItems.length}
       />

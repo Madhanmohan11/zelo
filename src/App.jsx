@@ -12,6 +12,7 @@ import { RegisterPage } from './pages/RegisterPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 
 import { TodayPage } from './pages/TodayPage'
+import { TasksPage } from './pages/TasksPage'
 import { FoodPage } from './pages/FoodPage'
 import { WorkoutPage } from './pages/WorkoutPage'
 import { RememberPage } from './pages/RememberPage'
@@ -103,6 +104,7 @@ export function App() {
                 }
               >
                 <Route path="/today" element={<TodayPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/food" element={<FoodPage />} />
                 <Route path="/workout" element={<WorkoutPage />} />
                 <Route path="/remember" element={<RememberPage />} />

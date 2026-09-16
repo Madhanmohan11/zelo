@@ -26,6 +26,14 @@ export const MorePage = () => {
 
   const featureLinks = [
     {
+      id: 'tasks',
+      title: 'Tasks',
+      description: 'Manage daily to-do list and action items',
+      icon: CheckCircle2,
+      badgeBg: 'bg-blue-50 text-blue-600',
+      path: '/tasks'
+    },
+    {
       id: 'calendar',
       title: 'Calendar',
       description: 'View events, schedule, and reminders',
