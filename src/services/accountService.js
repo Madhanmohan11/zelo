@@ -133,6 +133,40 @@ export const createAccount = async (userId, accountData) => {
 }
 
 // -----------------------------------------------------------------------------
+// ENSURE DEFAULT CASH ACCOUNT ("Cash in Hand")
+// -----------------------------------------------------------------------------
+export const ensureDefaultCashAccount = async (userId, existingAccounts = []) => {
+  if (!userId) return null
+
+  // Check if a cash account already exists (by account_type === 'cash' or name containing 'Cash')
+  const existingCashAccount = existingAccounts.find(
+    (a) => a.is_active !== false && (a.account_type === 'cash' || (a.name || '').toLowerCase().includes('cash'))
+  )
+
+  if (existingCashAccount) {
+    return existingCashAccount
+  }
+
+  // Create default "Cash in Hand" account safely
+  const defaultCashData = {
+    account_type: 'cash',
+    name: 'Cash in Hand',
+    nickname: 'Cash in Hand',
+    opening_balance: 0,
+    currency: 'INR',
+    notes: 'Default cash wallet for tracking physical currency'
+  }
+
+  try {
+    return await createAccount(userId, defaultCashData)
+  } catch (err) {
+    console.error('Error auto-creating default cash account:', err)
+    return null
+  }
+}
+
+
+// -----------------------------------------------------------------------------
 // UPDATE ACCOUNT
 // -----------------------------------------------------------------------------
 export const updateAccount = async (userId, accountId, updates) => {
