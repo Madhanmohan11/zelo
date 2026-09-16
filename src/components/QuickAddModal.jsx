@@ -3,7 +3,7 @@ import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Select } from './ui/Select'
-import { Utensils, Dumbbell, Bookmark, IndianRupee } from 'lucide-react'
+import { Utensils, Dumbbell, Bookmark, IndianRupee, Calendar, CheckSquare } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { useModulePreferences } from '../context/ModuleContext'
@@ -15,7 +15,7 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
   const { user } = useAuth()
   const { showToast } = useToast()
   const { isModuleEnabled } = useModulePreferences()
-  const [activeType, setActiveType] = useState('expense') // 'food', 'workout', 'remember', 'expense'
+  const [activeType, setActiveType] = useState('expense') // 'expense', 'remember', 'food', 'workout'
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Accounts state
