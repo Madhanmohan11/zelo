@@ -3,17 +3,19 @@ import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Select } from './ui/Select'
-import { Utensils, Dumbbell, Bookmark, IndianRupee } from 'lucide-react'
+import { Utensils, Dumbbell, Bookmark, IndianRupee, Calendar, CheckSquare } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { createMeal, createWorkout, createRememberItem, createExpense } from '../services/dataService'
+import { useModulePreferences } from '../context/ModuleContext'
+import { createMeal, createWorkout, createRememberItem, createExpense, createTask } from '../services/dataService'
 import { getAccounts } from '../services/accountService'
 import { formatINR } from '../utils/formatters'
 
 export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = () => {} }) => {
   const { user } = useAuth()
   const { showToast } = useToast()
-  const [activeType, setActiveType] = useState('expense') // 'food', 'workout', 'remember', 'expense'
+  const { isModuleEnabled } = useModulePreferences()
+  const [activeType, setActiveType] = useState('expense') // 'expense', 'tasks', 'remember', 'food', 'workout'
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Accounts state
@@ -25,6 +27,10 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
   const [category, setCategory] = useState('Food')
   const [paymentMethod, setPaymentMethod] = useState('UPI')
   const [expenseDesc, setExpenseDesc] = useState('')
+
+  const [taskTitle, setTaskTitle] = useState('')
+  const [taskPriority, setTaskPriority] = useState('normal')
+  const [taskDueDate, setTaskDueDate] = useState('')
 
   const [rememberTitle, setRememberTitle] = useState('')
   const [rememberLocation, setRememberLocation] = useState('')
@@ -39,6 +45,14 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
 
   // Auto focus ref
   const focusInputRef = useRef(null)
+
+  const availableTypes = [
+    { id: 'expense', label: 'Expense', icon: IndianRupee, activeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200', enabled: true },
+    { id: 'tasks', label: 'Task', icon: CheckSquare, activeBg: 'bg-blue-50 text-blue-800 border-blue-200', enabled: isModuleEnabled('tasks') },
+    { id: 'remember', label: 'Remember', icon: Bookmark, activeBg: 'bg-purple-50 text-purple-800 border-purple-200', enabled: isModuleEnabled('remember') },
+    { id: 'food', label: 'Food', icon: Utensils, activeBg: 'bg-amber-50 text-amber-800 border-amber-200', enabled: isModuleEnabled('food') },
+    { id: 'workout', label: 'Workout', icon: Dumbbell, activeBg: 'bg-rose-50 text-rose-800 border-rose-200', enabled: isModuleEnabled('workout') }
+  ].filter((t) => t.enabled)
 
   useEffect(() => {
     if (defaultTab) {
@@ -65,6 +79,8 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
   const resetForm = () => {
     setAmount('')
     setExpenseDesc('')
+    setTaskTitle('')
+    setTaskDueDate('')
     setRememberTitle('')
     setRememberLocation('')
     setExpectedDate('')
@@ -90,6 +106,16 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
           description: expenseDesc || `${category} expense`
         })
         showToast(`Logged expense ${formatINR(amount)}`, 'success')
+      } else if (activeType === 'tasks') {
+        if (!taskTitle.trim()) {
+          throw new Error('Please enter a task title')
+        }
+        await createTask(user.id, {
+          title: taskTitle.trim(),
+          priority: taskPriority,
+          due_date: taskDueDate || null
+        })
+        showToast(`Created task: "${taskTitle}"`, 'success')
       } else if (activeType === 'remember') {
         if (!rememberTitle.trim()) {
           throw new Error('Please specify what you need to remember')
@@ -131,18 +157,13 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
     }
   }
 
-  const types = [
-    { id: 'expense', label: 'Expense', icon: IndianRupee, activeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-    { id: 'remember', label: 'Remember', icon: Bookmark, activeBg: 'bg-purple-50 text-purple-800 border-purple-200' },
-    { id: 'food', label: 'Food', icon: Utensils, activeBg: 'bg-amber-50 text-amber-800 border-amber-200' },
-    { id: 'workout', label: 'Workout', icon: Dumbbell, activeBg: 'bg-rose-50 text-rose-800 border-rose-200' }
-  ]
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Quick Add to ZELO">
       {/* Selector Tabs */}
-      <div className="grid grid-cols-4 gap-2 mb-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/60">
-        {types.map((t) => {
+      <div className={`grid gap-2 mb-4 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/60 ${
+        availableTypes.length === 1 ? 'grid-cols-1' : availableTypes.length === 2 ? 'grid-cols-2' : availableTypes.length === 3 ? 'grid-cols-3' : 'grid-cols-4'
+      }`}>
+        {availableTypes.map((t) => {
           const Icon = t.icon
           const isActive = activeType === t.id
           return (
@@ -215,6 +236,39 @@ export const QuickAddModal = ({ isOpen, onClose, defaultTab = null, onSuccess = 
               value={expenseDesc}
               onChange={(e) => setExpenseDesc(e.target.value)}
             />
+          </>
+        )}
+
+        {/* TASK QUICK FORM */}
+        {activeType === 'tasks' && (
+          <>
+            <Input
+              ref={focusInputRef}
+              label="Task Title"
+              placeholder="e.g. Call client regarding contract"
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+              required
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Select
+                label="Priority"
+                value={taskPriority}
+                onChange={(e) => setTaskPriority(e.target.value)}
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'normal', label: 'Normal' },
+                  { value: 'high', label: 'High' },
+                  { value: 'urgent', label: 'Urgent' }
+                ]}
+              />
+              <Input
+                label="Due Date"
+                type="date"
+                value={taskDueDate}
+                onChange={(e) => setTaskDueDate(e.target.value)}
+              />
+            </div>
           </>
         )}
 
