@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { notifyDataUpdated } from '../utils/events'
 
 // Helper for LocalStorage fallback persistence
 export const getLocalData = (key, defaultVal = []) => {
@@ -63,7 +64,10 @@ export const createMeal = async (userId, mealData) => {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('meals').insert([newMeal]).select().single()
-      if (!error && data) return data
+      if (!error && data) {
+        notifyDataUpdated('meals', 'created', data)
+        return data
+      }
       console.warn('Supabase createMeal table error, using local fallback:', error?.message)
     } catch (err) {
       console.warn('Supabase createMeal failed:', err.message)
@@ -73,6 +77,7 @@ export const createMeal = async (userId, mealData) => {
   const allMeals = getLocalData(`meals_${userId}`, [])
   allMeals.push(newMeal)
   setLocalData(`meals_${userId}`, allMeals)
+  notifyDataUpdated('meals', 'created', newMeal)
   return newMeal
 }
 
@@ -88,7 +93,10 @@ export const updateMeal = async (userId, mealId, updates) => {
         .eq('user_id', userId)
         .select()
         .single()
-      if (!error && data) return data
+      if (!error && data) {
+        notifyDataUpdated('meals', 'updated', data)
+        return data
+      }
     } catch (err) {
       console.warn('Supabase updateMeal failed, using fallback:', err.message)
     }
@@ -99,8 +107,10 @@ export const updateMeal = async (userId, mealId, updates) => {
   if (index !== -1) {
     allMeals[index] = { ...allMeals[index], ...payload }
     setLocalData(`meals_${userId}`, allMeals)
+    notifyDataUpdated('meals', 'updated', allMeals[index])
     return allMeals[index]
   }
+  notifyDataUpdated('meals', 'updated', payload)
   return payload
 }
 
@@ -112,7 +122,10 @@ export const deleteMeal = async (userId, mealId) => {
         .delete()
         .eq('id', mealId)
         .eq('user_id', userId)
-      if (!error) return true
+      if (!error) {
+        notifyDataUpdated('meals', 'deleted', { id: mealId })
+        return true
+      }
     } catch (err) {
       console.warn('Supabase deleteMeal failed, using fallback:', err.message)
     }
@@ -121,6 +134,7 @@ export const deleteMeal = async (userId, mealId) => {
   let allMeals = getLocalData(`meals_${userId}`, [])
   allMeals = allMeals.filter((m) => m.id !== mealId)
   setLocalData(`meals_${userId}`, allMeals)
+  notifyDataUpdated('meals', 'deleted', { id: mealId })
   return true
 }
 
@@ -201,7 +215,9 @@ export const createWorkout = async (userId, workoutData, exercises = []) => {
         if (preparedExercises.length > 0) {
           await supabase.from('workout_exercises').insert(preparedExercises)
         }
-        return { ...data, workout_exercises: preparedExercises }
+        const workoutRes = { ...data, workout_exercises: preparedExercises }
+        notifyDataUpdated('workouts', 'created', workoutRes)
+        return workoutRes
       }
     } catch (err) {
       console.warn('Supabase createWorkout failed:', err.message)
@@ -211,6 +227,7 @@ export const createWorkout = async (userId, workoutData, exercises = []) => {
   const allWorkouts = getLocalData(`workouts_${userId}`, [])
   allWorkouts.push(newWorkout)
   setLocalData(`workouts_${userId}`, allWorkouts)
+  notifyDataUpdated('workouts', 'created', newWorkout)
   return newWorkout
 }
 
@@ -226,7 +243,10 @@ export const updateWorkout = async (userId, workoutId, updates) => {
         .eq('user_id', userId)
         .select()
         .single()
-      if (!error && data) return data
+      if (!error && data) {
+        notifyDataUpdated('workouts', 'updated', data)
+        return data
+      }
     } catch (err) {
       console.warn('Supabase updateWorkout failed:', err.message)
     }
@@ -237,8 +257,10 @@ export const updateWorkout = async (userId, workoutId, updates) => {
   if (index !== -1) {
     allWorkouts[index] = { ...allWorkouts[index], ...payload }
     setLocalData(`workouts_${userId}`, allWorkouts)
+    notifyDataUpdated('workouts', 'updated', allWorkouts[index])
     return allWorkouts[index]
   }
+  notifyDataUpdated('workouts', 'updated', payload)
   return payload
 }
 
@@ -250,7 +272,10 @@ export const deleteWorkout = async (userId, workoutId) => {
         .delete()
         .eq('id', workoutId)
         .eq('user_id', userId)
-      if (!error) return true
+      if (!error) {
+        notifyDataUpdated('workouts', 'deleted', { id: workoutId })
+        return true
+      }
     } catch (err) {
       console.warn('Supabase deleteWorkout failed:', err.message)
     }
@@ -259,6 +284,7 @@ export const deleteWorkout = async (userId, workoutId) => {
   let allWorkouts = getLocalData(`workouts_${userId}`, [])
   allWorkouts = allWorkouts.filter((w) => w.id !== workoutId)
   setLocalData(`workouts_${userId}`, allWorkouts)
+  notifyDataUpdated('workouts', 'deleted', { id: workoutId })
   return true
 }
 
@@ -303,7 +329,10 @@ export const createRememberItem = async (userId, itemData) => {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('remember_items').insert([newItem]).select().single()
-      if (!error && data) return data
+      if (!error && data) {
+        notifyDataUpdated('remember', 'created', data)
+        return data
+      }
     } catch (err) {
       console.warn('Supabase createRememberItem failed:', err.message)
     }
@@ -312,6 +341,7 @@ export const createRememberItem = async (userId, itemData) => {
   const allItems = getLocalData(`remember_${userId}`, [])
   allItems.push(newItem)
   setLocalData(`remember_${userId}`, allItems)
+  notifyDataUpdated('remember', 'created', newItem)
   return newItem
 }
 
@@ -327,7 +357,10 @@ export const updateRememberItem = async (userId, itemId, updates) => {
         .eq('user_id', userId)
         .select()
         .single()
-      if (!error && data) return data
+      if (!error && data) {
+        notifyDataUpdated('remember', 'updated', data)
+        return data
+      }
     } catch (err) {
       console.warn('Supabase updateRememberItem failed:', err.message)
     }
@@ -338,8 +371,10 @@ export const updateRememberItem = async (userId, itemId, updates) => {
   if (index !== -1) {
     allItems[index] = { ...allItems[index], ...payload }
     setLocalData(`remember_${userId}`, allItems)
+    notifyDataUpdated('remember', 'updated', allItems[index])
     return allItems[index]
   }
+  notifyDataUpdated('remember', 'updated', payload)
   return payload
 }
 
@@ -351,7 +386,10 @@ export const deleteRememberItem = async (userId, itemId) => {
         .delete()
         .eq('id', itemId)
         .eq('user_id', userId)
-      if (!error) return true
+      if (!error) {
+        notifyDataUpdated('remember', 'deleted', { id: itemId })
+        return true
+      }
     } catch (err) {
       console.warn('Supabase deleteRememberItem failed:', err.message)
     }
@@ -360,6 +398,7 @@ export const deleteRememberItem = async (userId, itemId) => {
   let allItems = getLocalData(`remember_${userId}`, [])
   allItems = allItems.filter((i) => i.id !== itemId)
   setLocalData(`remember_${userId}`, allItems)
+  notifyDataUpdated('remember', 'deleted', { id: itemId })
   return true
 }
 
@@ -404,7 +443,10 @@ export const createExpense = async (userId, expenseData) => {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('expenses').insert([newExpense]).select().single()
-      if (!error && data) return data
+      if (!error && data) {
+        notifyDataUpdated('expenses', 'created', data)
+        return data
+      }
     } catch (err) {
       console.warn('Supabase createExpense failed:', err.message)
     }
@@ -413,6 +455,7 @@ export const createExpense = async (userId, expenseData) => {
   const allExpenses = getLocalData(`expenses_${userId}`, [])
   allExpenses.push(newExpense)
   setLocalData(`expenses_${userId}`, allExpenses)
+  notifyDataUpdated('expenses', 'created', newExpense)
   return newExpense
 }
 
@@ -428,7 +471,10 @@ export const updateExpense = async (userId, expenseId, updates) => {
         .eq('user_id', userId)
         .select()
         .single()
-      if (!error && data) return data
+      if (!error && data) {
+        notifyDataUpdated('expenses', 'updated', data)
+        return data
+      }
     } catch (err) {
       console.warn('Supabase updateExpense failed:', err.message)
     }
@@ -439,8 +485,10 @@ export const updateExpense = async (userId, expenseId, updates) => {
   if (index !== -1) {
     allExpenses[index] = { ...allExpenses[index], ...payload }
     setLocalData(`expenses_${userId}`, allExpenses)
+    notifyDataUpdated('expenses', 'updated', allExpenses[index])
     return allExpenses[index]
   }
+  notifyDataUpdated('expenses', 'updated', payload)
   return payload
 }
 
@@ -452,7 +500,10 @@ export const deleteExpense = async (userId, expenseId) => {
         .delete()
         .eq('id', expenseId)
         .eq('user_id', userId)
-      if (!error) return true
+      if (!error) {
+        notifyDataUpdated('expenses', 'deleted', { id: expenseId })
+        return true
+      }
     } catch (err) {
       console.warn('Supabase deleteExpense failed:', err.message)
     }
@@ -461,6 +512,7 @@ export const deleteExpense = async (userId, expenseId) => {
   let allExpenses = getLocalData(`expenses_${userId}`, [])
   allExpenses = allExpenses.filter((e) => e.id !== expenseId)
   setLocalData(`expenses_${userId}`, allExpenses)
+  notifyDataUpdated('expenses', 'deleted', { id: expenseId })
   return true
 }
 
@@ -551,6 +603,7 @@ export const updateUserProfile = async (userId, profileData) => {
   const current = await getUserProfile(userId)
   const updated = { ...current, ...cleanData }
   setLocalData(`profile_${userId}`, updated)
+  notifyDataUpdated('profile', 'updated', updated)
   return updated
 }
 
@@ -640,17 +693,24 @@ export const updateUserSettings = async (userId, settingsData) => {
       if (!error && data) return data
       if (error) {
         console.error('Supabase updateUserSettings error:', error?.message)
-        throw error
+        if (error.code === 'PGRST204') {
+          console.warn('Supabase schema cache missing column, persisting to local fallback:', error.message)
+        } else {
+          throw error
+        }
       }
     } catch (err) {
-      console.warn('Supabase updateUserSettings failed:', err.message)
-      throw err
+      if (err?.code !== 'PGRST204') {
+        console.warn('Supabase updateUserSettings failed:', err.message)
+        throw err
+      }
     }
   }
 
   const current = await getUserSettings(userId)
   const updated = { ...current, ...cleanSettings }
   setLocalData(`settings_${userId}`, updated)
+  notifyDataUpdated('settings', 'updated', updated)
   return updated
 }
 
@@ -746,11 +806,13 @@ export const createTask = async (userId, taskData) => {
             dueTimeStr = parts[1].slice(0, 5)
           }
         }
-        return {
+        const taskRes = {
           ...data,
           due_date: dueDateStr,
           due_time: dueTimeStr
         }
+        notifyDataUpdated('tasks', 'created', taskRes)
+        return taskRes
       }
     } catch (err) {
       console.error('Supabase createTask failed:', err.message)
@@ -761,6 +823,7 @@ export const createTask = async (userId, taskData) => {
   const allTasks = getLocalData(`tasks_${userId}`, [])
   allTasks.push(localTask)
   setLocalData(`tasks_${userId}`, allTasks)
+  notifyDataUpdated('tasks', 'created', localTask)
   return localTask
 }
 
@@ -809,11 +872,13 @@ export const updateTask = async (userId, taskId, updates) => {
             dueTimeStr = parts[1].slice(0, 5)
           }
         }
-        return {
+        const updatedTaskRes = {
           ...data,
           due_date: dueDateStr,
           due_time: dueTimeStr
         }
+        notifyDataUpdated('tasks', 'updated', updatedTaskRes)
+        return updatedTaskRes
       }
     } catch (err) {
       console.error('Supabase updateTask failed:', err.message)
@@ -826,8 +891,10 @@ export const updateTask = async (userId, taskId, updates) => {
   if (index !== -1) {
     allTasks[index] = { ...allTasks[index], ...updates, ...dbPayload }
     setLocalData(`tasks_${userId}`, allTasks)
+    notifyDataUpdated('tasks', 'updated', allTasks[index])
     return allTasks[index]
   }
+  notifyDataUpdated('tasks', 'updated', { ...updates, ...dbPayload })
   return { ...updates, ...dbPayload }
 }
 
@@ -844,6 +911,7 @@ export const deleteTask = async (userId, taskId) => {
         console.error('Supabase deleteTask error:', error.message)
         throw error
       }
+      notifyDataUpdated('tasks', 'deleted', { id: taskId })
       return true
     } catch (err) {
       console.error('Supabase deleteTask failed:', err.message)
@@ -854,6 +922,7 @@ export const deleteTask = async (userId, taskId) => {
   let allTasks = getLocalData(`tasks_${userId}`, [])
   allTasks = allTasks.filter((t) => t.id !== taskId)
   setLocalData(`tasks_${userId}`, allTasks)
+  notifyDataUpdated('tasks', 'deleted', { id: taskId })
   return true
 }
 
@@ -948,12 +1017,16 @@ export const createEvent = async (userId, eventData) => {
       console.error('Supabase createEvent error:', error.message)
       throw error
     }
-    if (data) return localItem
+    if (data) {
+      notifyDataUpdated('calendar', 'created', localItem)
+      return localItem
+    }
   }
 
   const allEvents = getLocalData(`events_${userId}`, [])
   allEvents.push(localItem)
   setLocalData(`events_${userId}`, allEvents)
+  notifyDataUpdated('calendar', 'created', localItem)
   return localItem
 }
 
@@ -995,7 +1068,10 @@ export const updateEvent = async (userId, eventId, updates) => {
       console.error('Supabase updateEvent error:', error.message)
       throw error
     }
-    if (data) return data
+    if (data) {
+      notifyDataUpdated('calendar', 'updated', data)
+      return data
+    }
   }
 
   const allEvents = getLocalData(`events_${userId}`, [])
@@ -1003,8 +1079,10 @@ export const updateEvent = async (userId, eventId, updates) => {
   if (index !== -1) {
     allEvents[index] = { ...allEvents[index], ...updates }
     setLocalData(`events_${userId}`, allEvents)
+    notifyDataUpdated('calendar', 'updated', allEvents[index])
     return allEvents[index]
   }
+  notifyDataUpdated('calendar', 'updated', payload)
   return payload
 }
 
@@ -1015,16 +1093,16 @@ export const deleteEvent = async (userId, eventId) => {
       .delete()
       .eq('id', eventId)
       .eq('user_id', userId)
-    if (error) {
-      console.error('Supabase deleteEvent error:', error.message)
-      throw error
+    if (!error) {
+      notifyDataUpdated('calendar', 'deleted', { id: eventId })
+      return true
     }
-    return true
   }
 
   let allEvents = getLocalData(`events_${userId}`, [])
   allEvents = allEvents.filter((e) => e.id !== eventId)
   setLocalData(`events_${userId}`, allEvents)
+  notifyDataUpdated('calendar', 'deleted', { id: eventId })
   return true
 }
 
@@ -1088,12 +1166,16 @@ export const addWaterLog = async (userId, logData) => {
       console.error('Supabase addWaterLog error:', error.message)
       throw error
     }
-    if (data) return localLog
+    if (data) {
+      notifyDataUpdated('water', 'created', localLog)
+      return localLog
+    }
   }
 
   const allLogs = getLocalData(`water_${userId}`, [])
   allLogs.push(localLog)
   setLocalData(`water_${userId}`, allLogs)
+  notifyDataUpdated('water', 'created', localLog)
   return localLog
 }
 
@@ -1117,7 +1199,10 @@ export const updateWaterLog = async (userId, logId, updates) => {
       console.error('Supabase updateWaterLog error:', error.message)
       throw error
     }
-    if (data) return data
+    if (data) {
+      notifyDataUpdated('water', 'updated', data)
+      return data
+    }
   }
 
   const allLogs = getLocalData(`water_${userId}`, [])
@@ -1125,8 +1210,10 @@ export const updateWaterLog = async (userId, logId, updates) => {
   if (index !== -1) {
     allLogs[index] = { ...allLogs[index], ...updates }
     setLocalData(`water_${userId}`, allLogs)
+    notifyDataUpdated('water', 'updated', allLogs[index])
     return allLogs[index]
   }
+  notifyDataUpdated('water', 'updated', payload)
   return payload
 }
 
@@ -1137,16 +1224,16 @@ export const deleteWaterLog = async (userId, logId) => {
       .delete()
       .eq('id', logId)
       .eq('user_id', userId)
-    if (error) {
-      console.error('Supabase deleteWaterLog error:', error.message)
-      throw error
+    if (!error) {
+      notifyDataUpdated('water', 'deleted', { id: logId })
+      return true
     }
-    return true
   }
 
   let allLogs = getLocalData(`water_${userId}`, [])
   allLogs = allLogs.filter((w) => w.id !== logId)
   setLocalData(`water_${userId}`, allLogs)
+  notifyDataUpdated('water', 'deleted', { id: logId })
   return true
 }
 
@@ -1260,12 +1347,16 @@ export const addSleepLog = async (userId, logData) => {
       console.error('Supabase addSleepLog error:', error.message)
       throw error
     }
-    if (data) return localLog
+    if (data) {
+      notifyDataUpdated('sleep', 'created', localLog)
+      return localLog
+    }
   }
 
   const allLogs = getLocalData(`sleep_${userId}`, [])
   allLogs.push(localLog)
   setLocalData(`sleep_${userId}`, allLogs)
+  notifyDataUpdated('sleep', 'created', localLog)
   return localLog
 }
 
@@ -1309,7 +1400,10 @@ export const updateSleepLog = async (userId, logId, updates) => {
       console.error('Supabase updateSleepLog error:', error.message)
       throw error
     }
-    if (data) return data
+    if (data) {
+      notifyDataUpdated('sleep', 'updated', data)
+      return data
+    }
   }
 
   const allLogs = getLocalData(`sleep_${userId}`, [])
@@ -1317,8 +1411,10 @@ export const updateSleepLog = async (userId, logId, updates) => {
   if (index !== -1) {
     allLogs[index] = { ...allLogs[index], ...updates }
     setLocalData(`sleep_${userId}`, allLogs)
+    notifyDataUpdated('sleep', 'updated', allLogs[index])
     return allLogs[index]
   }
+  notifyDataUpdated('sleep', 'updated', payload)
   return payload
 }
 
@@ -1330,16 +1426,16 @@ export const deleteSleepLog = async (userId, logId) => {
       .eq('id', logId)
       .eq('user_id', userId)
 
-    if (error) {
-      console.error('Supabase deleteSleepLog error:', error.message)
-      throw error
+    if (!error) {
+      notifyDataUpdated('sleep', 'deleted', { id: logId })
+      return true
     }
-    return true
   }
 
   let allLogs = getLocalData(`sleep_${userId}`, [])
   allLogs = allLogs.filter((s) => s.id !== logId)
   setLocalData(`sleep_${userId}`, allLogs)
+  notifyDataUpdated('sleep', 'deleted', { id: logId })
   return true
 }
 
@@ -1442,12 +1538,16 @@ export const createGoal = async (userId, goalData) => {
       console.error('Supabase createGoal error:', error.message)
       throw error
     }
-    if (data) return localGoal
+    if (data) {
+      notifyDataUpdated('goals', 'created', localGoal)
+      return localGoal
+    }
   }
 
   const allGoals = getLocalData(`goals_${userId}`, [])
   allGoals.push(localGoal)
   setLocalData(`goals_${userId}`, allGoals)
+  notifyDataUpdated('goals', 'created', localGoal)
   return localGoal
 }
 
@@ -1487,7 +1587,10 @@ export const updateGoal = async (userId, goalId, updates) => {
       console.error('Supabase updateGoal error:', error.message)
       throw error
     }
-    if (data) return data
+    if (data) {
+      notifyDataUpdated('goals', 'updated', data)
+      return data
+    }
   }
 
   const allGoals = getLocalData(`goals_${userId}`, [])
@@ -1495,8 +1598,10 @@ export const updateGoal = async (userId, goalId, updates) => {
   if (index !== -1) {
     allGoals[index] = { ...allGoals[index], ...updates, updated_at: new Date().toISOString() }
     setLocalData(`goals_${userId}`, allGoals)
+    notifyDataUpdated('goals', 'updated', allGoals[index])
     return allGoals[index]
   }
+  notifyDataUpdated('goals', 'updated', payload)
   return payload
 }
 
@@ -1508,7 +1613,10 @@ export const deleteGoal = async (userId, goalId) => {
         .delete()
         .eq('id', goalId)
         .eq('user_id', userId)
-      if (!error) return true
+      if (!error) {
+        notifyDataUpdated('goals', 'deleted', { id: goalId })
+        return true
+      }
     } catch (err) {
       console.warn('Supabase deleteGoal failed:', err.message)
     }
@@ -1517,6 +1625,7 @@ export const deleteGoal = async (userId, goalId) => {
   let allGoals = getLocalData(`goals_${userId}`, [])
   allGoals = allGoals.filter((g) => g.id !== goalId)
   setLocalData(`goals_${userId}`, allGoals)
+  notifyDataUpdated('goals', 'deleted', { id: goalId })
   return true
 }
 

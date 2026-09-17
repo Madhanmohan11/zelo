@@ -519,17 +519,17 @@ export const DashboardProvider = ({ children }) => {
     refreshAllSummaries()
   }, [userId, refreshAllSummaries, getInitialCache])
 
-  // DOM Event Bridge for legacy 'zelo_data_updated' compatibility
+  // DOM Event Bridge for 'zelo_data_updated' cross-module synchronization
   useEffect(() => {
-    const handleLegacyEvent = (event) => {
-      const moduleName = event?.detail?.module?.toLowerCase() || ''
+    const handleDataUpdatedEvent = (event) => {
+      const moduleName = event?.detail?.module?.toLowerCase()?.trim() || ''
       if (moduleName === 'expenses' || moduleName === 'money') {
         refreshExpensesSummary()
       } else if (moduleName === 'tasks') {
         refreshTasksSummary()
       } else if (moduleName === 'calendar' || moduleName === 'events') {
         refreshCalendarSummary()
-      } else if (moduleName === 'remember') {
+      } else if (moduleName === 'remember' || moduleName === 'reminders') {
         refreshRememberSummary()
       } else if (moduleName === 'meals' || moduleName === 'food') {
         refreshMealsSummary()
@@ -541,13 +541,15 @@ export const DashboardProvider = ({ children }) => {
         refreshSleepSummary()
       } else if (moduleName === 'goals') {
         refreshGoalsSummary()
+      } else if (moduleName === 'profile' || moduleName === 'settings') {
+        refreshAllSummaries()
       } else {
         refreshAllSummaries()
       }
     }
 
-    window.addEventListener('zelo_data_updated', handleLegacyEvent)
-    return () => window.removeEventListener('zelo_data_updated', handleLegacyEvent)
+    window.addEventListener('zelo_data_updated', handleDataUpdatedEvent)
+    return () => window.removeEventListener('zelo_data_updated', handleDataUpdatedEvent)
   }, [
     refreshExpensesSummary,
     refreshTasksSummary,

@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { notifyDataUpdated } from '../utils/events'
 
 // LocalStorage helpers
 const getLocalData = (key, defaultVal = []) => {
@@ -123,12 +124,16 @@ export const createAccount = async (userId, accountData) => {
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.from('accounts').insert([newAccount]).select().single()
     if (error) throw error
-    return data
+    if (data) {
+      notifyDataUpdated('money', 'created', data)
+      return data
+    }
   }
 
   const allAccounts = getLocalData(`accounts_${userId}`, [])
   allAccounts.push(newAccount)
   setLocalData(`accounts_${userId}`, allAccounts)
+  notifyDataUpdated('money', 'created', newAccount)
   return newAccount
 }
 
@@ -192,8 +197,10 @@ export const updateAccount = async (userId, accountId, updates) => {
       .eq('user_id', userId)
       .select()
       .single()
-    if (error) throw error
-    return data
+    if (!error && data) {
+      notifyDataUpdated('money', 'updated', data)
+      return data
+    }
   }
 
   const allAccounts = getLocalData(`accounts_${userId}`, [])
@@ -201,6 +208,7 @@ export const updateAccount = async (userId, accountId, updates) => {
   if (index !== -1) {
     allAccounts[index] = { ...allAccounts[index], ...payload }
     setLocalData(`accounts_${userId}`, allAccounts)
+    notifyDataUpdated('money', 'updated', allAccounts[index])
     return allAccounts[index]
   }
   throw new Error('Account not found')
@@ -225,12 +233,14 @@ export const deleteAccount = async (userId, accountId) => {
       .eq('user_id', userId)
 
     if (error) throw error
+    notifyDataUpdated('money', 'deleted', { id: accountId })
     return true
   }
 
   const allAccounts = getLocalData(`accounts_${userId}`, [])
   const filtered = allAccounts.filter((a) => a.id !== accountId)
   setLocalData(`accounts_${userId}`, filtered)
+  notifyDataUpdated('money', 'deleted', { id: accountId })
   return true
 }
 
@@ -346,12 +356,14 @@ export const addMoney = async (userId, { account_id, amount, description, catego
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.from('money_transactions').insert([transaction]).select().single()
     if (error) throw error
+    notifyDataUpdated('money', 'created', data)
     return data
   }
 
   const allTx = getLocalData(`money_transactions_${userId}`, [])
   allTx.push(transaction)
   setLocalData(`money_transactions_${userId}`, allTx)
+  notifyDataUpdated('money', 'created', transaction)
   return transaction
 }
 
@@ -384,11 +396,13 @@ export const transferMoney = async (userId, { from_account_id, to_account_id, am
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.from('money_transactions').insert([transaction]).select().single()
     if (error) throw error
+    notifyDataUpdated('money', 'created', data)
     return data
   }
 
   const allTx = getLocalData(`money_transactions_${userId}`, [])
   allTx.push(transaction)
   setLocalData(`money_transactions_${userId}`, allTx)
+  notifyDataUpdated('money', 'created', transaction)
   return transaction
 }

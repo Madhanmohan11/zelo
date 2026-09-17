@@ -11,6 +11,7 @@ import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getTasks, createTask, updateTask, deleteTask } from '../services/dataService'
+import { notifyDataUpdated } from '../utils/events'
 
 export const TasksPage = () => {
   const { user } = useAuth()

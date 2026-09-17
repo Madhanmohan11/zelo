@@ -13,6 +13,7 @@ import zeloLogo from '../assets/Logo.png'
 import { useAuth } from '../context/AuthContext'
 import { QuickAddModal } from '../components/QuickAddModal'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
+import { notifyDataUpdated } from '../utils/events'
 
 export const AppLayout = () => {
   const { profile } = useAuth()
@@ -176,8 +177,8 @@ export const AppLayout = () => {
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         defaultTab={quickAddTab}
-        onSuccess={() => {
-          window.dispatchEvent(new Event('zelo_data_updated'))
+        onSuccess={(mod) => {
+          notifyDataUpdated(mod || 'all', 'created')
         }}
       />
     </div>
