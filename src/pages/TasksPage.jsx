@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Modal } from '../components/ui/Modal'
+import { ConfirmModal } from '../components/ui/ConfirmModal'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +19,7 @@ export const TasksPage = () => {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('today') // 'today', 'upcoming', 'completed', 'all'
+  const [categoryFilter, setCategoryFilter] = useState('all')
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -25,9 +27,37 @@ export const TasksPage = () => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('normal')
+  const [category, setCategory] = useState('General')
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0])
-  const [dueTime, setDueTime] = useState('')
+  const [dueTime, setDueTime] = useState('18:00')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Delete Confirm Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletingTaskId, setDeletingTaskId] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const openDeleteModal = (taskId) => {
+    setDeletingTaskId(taskId)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleExecuteDelete = async () => {
+    if (!deletingTaskId || !user) return
+    setIsDeleting(true)
+    try {
+      await deleteTask(user.id, deletingTaskId)
+      setTasks((prev) => prev.filter((t) => t.id !== deletingTaskId))
+      window.dispatchEvent(new Event('zelo_data_updated'))
+      showToast('Task deleted', 'info')
+      setIsDeleteModalOpen(false)
+      setDeletingTaskId(null)
+    } catch (e) {
+      showToast('Failed to delete task', 'error')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const loadTasks = useCallback(async () => {
     if (!user) return
@@ -123,18 +153,6 @@ export const TasksPage = () => {
       )
     } catch (e) {
       showToast('Failed to update task status', 'error')
-    }
-  }
-
-  const handleDelete = async (taskId) => {
-    if (!window.confirm('Delete this task?')) return
-    try {
-      await deleteTask(user.id, taskId)
-      setTasks((prev) => prev.filter((t) => t.id !== taskId))
-      window.dispatchEvent(new Event('zelo_data_updated'))
-      showToast('Task deleted', 'info')
-    } catch (e) {
-      showToast('Failed to delete task', 'error')
     }
   }
 
@@ -308,7 +326,7 @@ export const TasksPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(task.id)}
+                    onClick={() => openDeleteModal(task.id)}
                     className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -319,6 +337,20 @@ export const TasksPage = () => {
           })}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingTaskId(null)
+        }}
+        onConfirm={handleExecuteDelete}
+        title="Delete Task?"
+        message="Are you sure you want to delete this task? This action cannot be undone."
+        confirmText="Delete Task"
+        isLoading={isDeleting}
+      />
 
       {/* ADD / EDIT TASK MODAL */}
       <Modal

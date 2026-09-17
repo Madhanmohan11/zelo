@@ -863,20 +863,25 @@ export const updateEvent = async (userId, eventId, updates) => {
   const payload = {}
 
   if (updates.title) payload.title = updates.title
-  if (updates.notes || updates.description) payload.description = updates.notes || updates.description
+  if (updates.notes !== undefined || updates.description !== undefined) {
+    payload.description = updates.notes !== undefined ? updates.notes : updates.description
+  }
   if (updates.location !== undefined) payload.location = updates.location
   if (updates.is_all_day !== undefined) payload.is_all_day = Boolean(updates.is_all_day)
   if (updates.category) payload.category = updates.category
 
-  if (updates.event_date || updates.start_time) {
-    const eDate = updates.event_date || new Date().toISOString().split('T')[0]
-    const sTime = updates.start_time || '09:00'
-    payload.start_time = new Date(`${eDate}T${sTime}:00`).toISOString()
+  const eventDate = updates.event_date || new Date().toISOString().split('T')[0]
+
+  if (updates.start_time) {
+    payload.start_time = updates.start_time.includes('T')
+      ? updates.start_time
+      : new Date(`${eventDate}T${updates.start_time}:00`).toISOString()
   }
-  if (updates.event_date || updates.end_time) {
-    const eDate = updates.event_date || new Date().toISOString().split('T')[0]
-    const eTime = updates.end_time || '10:00'
-    payload.end_time = new Date(`${eDate}T${eTime}:00`).toISOString()
+
+  if (updates.end_time) {
+    payload.end_time = updates.end_time.includes('T')
+      ? updates.end_time
+      : new Date(`${eventDate}T${updates.end_time}:00`).toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {

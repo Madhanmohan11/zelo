@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { saveHeroSettings, resetHeroSettings } from '../../services/userSettingsService'
 import { EditSloganModal } from '../../components/home/EditSloganModal'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 
 export const AppearancePage = () => {
   const navigate = useNavigate()
@@ -25,6 +26,8 @@ export const AppearancePage = () => {
   )
   const [customSlogan, setCustomSlogan] = useState(userSettings?.custom_slogan || '')
   const [isSloganModalOpen, setIsSloganModalOpen] = useState(false)
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
 
   const handleSelectTheme = async (mode) => {
     setSelectedTheme(mode)
@@ -67,8 +70,12 @@ export const AppearancePage = () => {
     }
   }
 
-  const handleResetDefaults = async () => {
-    if (!window.confirm('Reset slogan and hero settings to default?')) return
+  const handleResetDefaults = () => {
+    setIsResetModalOpen(true)
+  }
+
+  const handleExecuteReset = async () => {
+    setIsResetting(true)
     try {
       await resetHeroSettings(user.id)
       setDynamicHeroEnabled(true)
@@ -76,8 +83,11 @@ export const AppearancePage = () => {
       setCustomSlogan('')
       refreshUserSettings?.()
       showToast('Reset to default slogan and settings', 'success')
+      setIsResetModalOpen(false)
     } catch (err) {
       showToast('Failed to reset settings', 'error')
+    } finally {
+      setIsResetting(false)
     }
   }
 
@@ -293,6 +303,17 @@ export const AppearancePage = () => {
           setCustomSlogan(newVal)
           refreshUserSettings?.()
         }}
+      />
+      {/* RESET CONFIRMATION MODAL */}
+      <ConfirmModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onConfirm={handleExecuteReset}
+        title="Reset Appearance Settings?"
+        message="Are you sure you want to reset your slogan and hero header settings to default? This action cannot be undone."
+        confirmText="Reset Settings"
+        isLoading={isResetting}
+        variant="warning"
       />
     </div>
   )

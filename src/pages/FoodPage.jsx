@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { ConfirmModal } from '../components/ui/ConfirmModal'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
@@ -30,6 +31,32 @@ export const FoodPage = () => {
   const [description, setDescription] = useState('')
   const [calories, setCalories] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Delete Confirm Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletingMealId, setDeletingMealId] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const openDeleteModal = (mealId) => {
+    setDeletingMealId(mealId)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleExecuteDelete = async () => {
+    if (!deletingMealId || !user) return
+    setIsDeleting(true)
+    try {
+      await deleteMeal(user.id, deletingMealId)
+      setMeals((prev) => prev.filter((m) => m.id !== deletingMealId))
+      showToast('Meal deleted', 'info')
+      setIsDeleteModalOpen(false)
+      setDeletingMealId(null)
+    } catch (e) {
+      showToast('Failed to delete meal', 'error')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const loadMeals = useCallback(async () => {
     if (!user) return
@@ -113,17 +140,6 @@ export const FoodPage = () => {
       showToast(`Marked as ${status}`, 'success')
     } catch (e) {
       showToast('Failed to update status', 'error')
-    }
-  }
-
-  const handleDelete = async (mealId) => {
-    if (!window.confirm('Are you sure you want to delete this meal?')) return
-    try {
-      await deleteMeal(user.id, mealId)
-      setMeals(prev => prev.filter(m => m.id !== mealId))
-      showToast('Meal deleted', 'info')
-    } catch (e) {
-      showToast('Failed to delete meal', 'error')
     }
   }
 
@@ -255,8 +271,9 @@ export const FoodPage = () => {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(meal.id)}
-                    className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
+                    type="button"
+                    onClick={() => openDeleteModal(meal.id)}
+                    className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -326,6 +343,20 @@ export const FoodPage = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingMealId(null)
+        }}
+        onConfirm={handleExecuteDelete}
+        title="Delete Meal Log?"
+        message="Are you sure you want to delete this meal log? This action cannot be undone."
+        confirmText="Delete Meal"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }
