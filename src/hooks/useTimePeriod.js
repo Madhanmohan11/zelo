@@ -77,7 +77,10 @@ export const TIME_PERIOD_CONFIGS = {
   }
 }
 
-export const DEFAULT_TWO_LINE_SLOGAN = "Stay consistent.\nYour future self will thank you."
+import { DEFAULT_SLOGAN } from '../constants/slogan'
+
+export { DEFAULT_SLOGAN }
+export const DEFAULT_TWO_LINE_SLOGAN = DEFAULT_SLOGAN
 
 export const useTimePeriod = (autoTimeBgEnabled = true) => {
   const [periodKey, setPeriodKey] = useState(() => getTimePeriod())

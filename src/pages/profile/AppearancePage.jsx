@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext'
 import { saveHeroSettings, resetHeroSettings } from '../../services/userSettingsService'
 import { EditSloganModal } from '../../components/home/EditSloganModal'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
+import { DEFAULT_SLOGAN } from '../../constants/slogan'
 
 export const AppearancePage = () => {
   const navigate = useNavigate()
@@ -264,7 +265,7 @@ export const AppearancePage = () => {
                   Your Personal Slogan
                 </h4>
                 <p className="text-[11px] font-semibold text-slate-500 mt-0.5 truncate">
-                  {customSlogan || 'A better you, every day.'}
+                  {customSlogan || DEFAULT_SLOGAN.replace('\n', ' ')}
                 </p>
               </div>
             </div>
