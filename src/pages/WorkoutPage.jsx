@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { ConfirmModal } from '../components/ui/ConfirmModal'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
@@ -125,14 +126,29 @@ export const WorkoutPage = () => {
     }
   }
 
-  const handleDelete = async (workoutId) => {
-    if (!window.confirm('Delete this workout session?')) return
+  // Delete Confirm Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletingWorkoutId, setDeletingWorkoutId] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const openDeleteModal = (workoutId) => {
+    setDeletingWorkoutId(workoutId)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleExecuteDelete = async () => {
+    if (!deletingWorkoutId || !user) return
+    setIsDeleting(true)
     try {
-      await deleteWorkout(user.id, workoutId)
-      setWorkouts(prev => prev.filter(w => w.id !== workoutId))
+      await deleteWorkout(user.id, deletingWorkoutId)
+      setWorkouts(prev => prev.filter(w => w.id !== deletingWorkoutId))
       showToast('Workout deleted', 'info')
+      setIsDeleteModalOpen(false)
+      setDeletingWorkoutId(null)
     } catch (e) {
       showToast('Failed to delete workout', 'error')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -232,7 +248,7 @@ export const WorkoutPage = () => {
                 </button>
 
                 <button
-                  onClick={() => handleDelete(workout.id)}
+                  onClick={() => openDeleteModal(workout.id)}
                   className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -243,11 +259,25 @@ export const WorkoutPage = () => {
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingWorkoutId(null)
+        }}
+        onConfirm={handleExecuteDelete}
+        title="Delete Workout Session?"
+        message="Are you sure you want to delete this workout session? This action cannot be undone."
+        confirmText="Delete Workout"
+        isLoading={isDeleting}
+      />
+
       {/* Add Workout Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Schedule Workout Routine"
+        title={editingWorkout ? 'Edit Workout Routine' : 'Log Workout Session'}
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">

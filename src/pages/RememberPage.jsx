@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { ConfirmModal } from '../components/ui/ConfirmModal'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
@@ -23,6 +24,32 @@ export const RememberPage = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
+
+  // Delete Confirm Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletingItemId, setDeletingItemId] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const openDeleteModal = (itemId) => {
+    setDeletingItemId(itemId)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleExecuteDelete = async () => {
+    if (!deletingItemId || !user) return
+    setIsDeleting(true)
+    try {
+      await deleteRememberItem(user.id, deletingItemId)
+      setItems(prev => prev.filter(i => i.id !== deletingItemId))
+      showToast('Item deleted', 'info')
+      setIsDeleteModalOpen(false)
+      setDeletingItemId(null)
+    } catch (e) {
+      showToast('Failed to delete item', 'error')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
   const [title, setTitle] = useState('')
   const [location, setLocation] = useState('')
   const [status, setStatus] = useState('waiting')
@@ -116,17 +143,6 @@ export const RememberPage = () => {
       showToast(`Status updated to ${newStatus}`, 'success')
     } catch (e) {
       showToast('Failed to update status', 'error')
-    }
-  }
-
-  const handleDelete = async (itemId) => {
-    if (!window.confirm('Delete this remember item?')) return
-    try {
-      await deleteRememberItem(user.id, itemId)
-      setItems(prev => prev.filter(i => i.id !== itemId))
-      showToast('Item deleted', 'info')
-    } catch (e) {
-      showToast('Failed to delete item', 'error')
     }
   }
 
@@ -280,7 +296,7 @@ export const RememberPage = () => {
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => openDeleteModal(item.id)}
                       className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -358,6 +374,20 @@ export const RememberPage = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingItemId(null)
+        }}
+        onConfirm={handleExecuteDelete}
+        title="Delete Remember Item?"
+        message="Are you sure you want to delete this item? This action cannot be undone."
+        confirmText="Delete Item"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

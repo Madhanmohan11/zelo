@@ -20,16 +20,26 @@ import {
   Tag,
   X,
   Filter,
-  Info
+  Info,
+  Edit2,
+  Trash2
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
-import { getExpenses, getRememberItems, getTasks, getEvents, createEvent, deleteEvent, updateEvent } from '../services/dataService'
+import { useToast } from '../context/ToastContext'
+import { useDashboard } from '../context/DashboardContext'
+import {
+  getRememberItems,
+  getTasks,
+  getEvents,
+  createEvent,
+  deleteEvent,
+  updateEvent
+} from '../services/dataService'
 import { getTamilDateDetails } from '../services/tamilCalendarService'
 import { getHolidaysForDate, getHolidaysForMonth, getHolidaysForYear, HOLIDAY_CATEGORIES } from '../services/holidayService'
 import { getPanchangamTimings, DEFAULT_LOCATION } from '../services/panchangamService'
-import { formatINR } from '../utils/formatters'
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -38,6 +48,8 @@ const MONTH_NAMES = [
 
 export const CalendarPage = () => {
   const { user } = useAuth()
+  const { showToast } = useToast()
+  const dashboard = useDashboard()
   const navigate = useNavigate()
 
   // Base dates
@@ -56,13 +68,34 @@ export const CalendarPage = () => {
   const [tasks, setTasks] = useState([])
   const [remembers, setRemembers] = useState([])
 
-  // Event Modal state
+  // Create Event Modal state
   const [showAddEventModal, setShowAddEventModal] = useState(false)
   const [newEventTitle, setNewEventTitle] = useState('')
   const [newEventCategory, setNewEventCategory] = useState('Personal')
   const [newEventTime, setNewEventTime] = useState('09:00')
+  const [newEventEndTime, setNewEventEndTime] = useState('10:00')
   const [newEventLocation, setNewEventLocation] = useState('')
   const [newEventNotes, setNewEventNotes] = useState('')
+  const [newEventIsAllDay, setNewEventIsAllDay] = useState(false)
+
+  // Event Details Modal & Edit Event Modal state
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
+
+  const [showEditEventModal, setShowEditEventModal] = useState(false)
+  const [editEventTitle, setEditEventTitle] = useState('')
+  const [editEventCategory, setEditEventCategory] = useState('Personal')
+  const [editEventStartDate, setEditEventStartDate] = useState('')
+  const [editEventStartTime, setEditEventStartTime] = useState('09:00')
+  const [editEventEndDate, setEditEventEndDate] = useState('')
+  const [editEventEndTime, setEditEventEndTime] = useState('10:00')
+  const [editEventLocation, setEditEventLocation] = useState('')
+  const [editEventNotes, setEditEventNotes] = useState('')
+  const [editEventIsAllDay, setEditEventIsAllDay] = useState(false)
+
+  // Delete Event Confirm state
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false)
+  const [deletingEventId, setDeletingEventId] = useState(null)
 
   // Holidays Filter
   const [holidayFilter, setHolidayFilter] = useState('All')
@@ -216,16 +249,103 @@ export const CalendarPage = () => {
         category: newEventCategory,
         event_date: selectedDateStr,
         start_time: newEventTime,
+        end_time: newEventEndTime,
         location: newEventLocation,
-        notes: newEventNotes
+        notes: newEventNotes,
+        is_all_day: newEventIsAllDay
       })
       setNewEventTitle('')
       setNewEventLocation('')
       setNewEventNotes('')
       setShowAddEventModal(false)
+      showToast('Event created successfully!', 'success')
       loadData()
+      if (dashboard?.refreshCalendarSummary) {
+        dashboard.refreshCalendarSummary()
+      }
     } catch (err) {
       console.error('Failed to create event:', err)
+      showToast('Failed to create event', 'error')
+    }
+  }
+
+  // Open Event Details Modal
+  const handleOpenEventDetails = (evt) => {
+    setSelectedEvent(evt)
+    setShowEventDetailsModal(true)
+  }
+
+  // Open Edit Event Modal pre-filled
+  const handleOpenEditEvent = (evt) => {
+    setSelectedEvent(evt)
+    setEditEventTitle(evt.title || '')
+    setEditEventCategory(evt.category || 'Personal')
+    setEditEventStartDate(evt.event_date || selectedDateStr)
+    setEditEventStartTime(evt.start_time || '09:00')
+    setEditEventEndDate(evt.event_date || selectedDateStr)
+    setEditEventEndTime(evt.end_time || '10:00')
+    setEditEventLocation(evt.location || '')
+    setEditEventNotes(evt.notes || evt.description || '')
+    setEditEventIsAllDay(Boolean(evt.is_all_day))
+
+    setShowEventDetailsModal(false)
+    setShowEditEventModal(true)
+  }
+
+  // Handle Update Event
+  const handleUpdateEvent = async (e) => {
+    e.preventDefault()
+    if (!editEventTitle.trim() || !selectedEvent || !user) return
+
+    try {
+      await updateEvent(user.id, selectedEvent.id, {
+        title: editEventTitle.trim(),
+        category: editEventCategory,
+        event_date: editEventStartDate,
+        start_time: editEventStartTime,
+        end_time: editEventEndTime,
+        location: editEventLocation,
+        notes: editEventNotes,
+        is_all_day: editEventIsAllDay
+      })
+
+      setShowEditEventModal(false)
+      setSelectedEvent(null)
+      showToast('Event updated successfully!', 'success')
+      loadData()
+      if (dashboard?.refreshCalendarSummary) {
+        dashboard.refreshCalendarSummary()
+      }
+    } catch (err) {
+      console.error('Failed to update event:', err)
+      showToast('Failed to update event', 'error')
+    }
+  }
+
+  // Confirm Delete Event Trigger
+  const handleConfirmDeleteEvent = (eventId) => {
+    setDeletingEventId(eventId)
+    setShowDeleteConfirmModal(true)
+  }
+
+  // Execute Delete Event
+  const handleDeleteEvent = async () => {
+    if (!deletingEventId || !user) return
+
+    try {
+      await deleteEvent(user.id, deletingEventId)
+      setShowDeleteConfirmModal(false)
+      setShowEventDetailsModal(false)
+      setSelectedEvent(null)
+      setDeletingEventId(null)
+      showToast('Event deleted', 'info')
+      loadData()
+      if (dashboard?.refreshCalendarSummary) {
+        dashboard.refreshCalendarSummary()
+      }
+    } catch (err) {
+      console.error('Failed to delete event:', err)
+      showToast('Failed to delete event', 'error')
     }
   }
 
@@ -366,7 +486,7 @@ export const CalendarPage = () => {
               >
                 <span className="text-xs">{day.dayNumber}</span>
 
-                {/* Multiple Color-Coded Indicator Dots */}
+                {/* Color-Coded Indicator Dots */}
                 <div className="flex items-center gap-0.5 mt-0.5 max-w-full overflow-hidden px-1">
                   {hasPersonal && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-300' : 'bg-amber-500'}`} title="Personal Event" />}
                   {hasTask && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-200' : 'bg-emerald-600'}`} title="Task" />}
@@ -413,7 +533,6 @@ export const CalendarPage = () => {
       <div className="space-y-4">
         {/* TAMIL TEMPLE HERO BANNER CARD */}
         <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white p-5 shadow-lg border border-slate-800">
-          {/* Background Decorative Tanjore Temple SVG Graphic */}
           <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-20 pointer-events-none flex items-center justify-end pr-2">
             <svg viewBox="0 0 200 200" className="w-48 h-48 fill-emerald-300">
               <path d="M100 10 L120 40 L115 40 L130 70 L125 70 L140 100 L135 100 L150 140 L50 140 L65 100 L60 100 L75 70 L70 70 L85 40 L80 40 Z" />
@@ -466,7 +585,6 @@ export const CalendarPage = () => {
               </div>
             </div>
 
-            {/* Inspirational Quote */}
             <p className="text-xs font-medium italic text-emerald-100/80 pt-1 border-t border-slate-800">
               "Discipline today, a better tomorrow."
             </p>
@@ -555,7 +673,6 @@ export const CalendarPage = () => {
                 </h3>
               </div>
 
-              {/* Auspicious Timings Grid */}
               <div className="space-y-1.5">
                 <h4 className="text-[11px] font-black uppercase tracking-wider text-emerald-700">Auspicious Periods</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -571,7 +688,6 @@ export const CalendarPage = () => {
                 </div>
               </div>
 
-              {/* Inauspicious Timings Grid */}
               <div className="space-y-1.5 pt-2 border-t border-slate-100">
                 <h4 className="text-[11px] font-black uppercase tracking-wider text-rose-700">Traditional Inauspicious Periods</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -618,24 +734,63 @@ export const CalendarPage = () => {
               </Card>
             ) : (
               <div className="space-y-2">
-                {/* Personal Events */}
+                {/* Personal Events Cards */}
                 {selectedDateMap.personal.map((evt) => (
-                  <Card key={evt.id} className="p-3.5 bg-white border border-slate-200/90 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
+                  <Card
+                    key={evt.id}
+                    onClick={() => handleOpenEventDetails(evt)}
+                    className="p-3.5 bg-white border border-slate-200/90 hover:border-emerald-300 rounded-2xl flex items-center justify-between gap-3 shadow-2xs transition-all cursor-pointer group"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                      <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-105 transition-transform">
                         <CalendarIcon className="w-4 h-4 stroke-[2.5]" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-extrabold text-slate-900">{evt.title}</h4>
+                          <h4 className="text-xs font-extrabold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                            {evt.title}
+                          </h4>
                           <span className="text-[9px] font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                             {evt.category || 'Personal'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          {evt.start_time} {evt.location ? `• ${evt.location}` : ''}
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>{evt.start_time} - {evt.end_time || '10:00'}</span>
+                          {evt.location && (
+                            <>
+                              <span>•</span>
+                              <MapPin className="w-3 h-3 text-slate-400" />
+                              <span>{evt.location}</span>
+                            </>
+                          )}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenEditEvent(evt)
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="Edit Event"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleConfirmDeleteEvent(evt.id)
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Delete Event"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </Card>
                 ))}
@@ -750,7 +905,6 @@ export const CalendarPage = () => {
         {/* TAB CONTENT: HOLIDAYS */}
         {activeTab === 'Holidays' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Filter Tabs */}
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs font-extrabold">
               {['All', HOLIDAY_CATEGORIES.GOVT, HOLIDAY_CATEGORIES.NATIONAL, HOLIDAY_CATEGORIES.FESTIVAL, HOLIDAY_CATEGORIES.IMPORTANT].map((f) => (
                 <button
@@ -768,7 +922,6 @@ export const CalendarPage = () => {
               ))}
             </div>
 
-            {/* Month Holidays List */}
             {monthHolidays.length === 0 ? (
               <Card className="p-6 bg-white border border-slate-200/80 rounded-3xl text-center space-y-2">
                 <Flag className="w-8 h-8 text-slate-300 mx-auto" />
@@ -798,6 +951,263 @@ export const CalendarPage = () => {
           </div>
         )}
       </div>
+
+      {/* EVENT DETAILS VIEW MODAL */}
+      {showEventDetailsModal && selectedEvent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">Event Details</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEventDetailsModal(false)
+                  setSelectedEvent(null)
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Event Main Banner Card */}
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-3">
+                <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl shrink-0">
+                  <CalendarIcon className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-base font-black text-slate-900 tracking-tight">{selectedEvent.title}</h2>
+                  <p className="text-xs font-extrabold text-slate-600 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{selectedEvent.start_time} - {selectedEvent.end_time || '10:00 AM'}</span>
+                  </p>
+                  {selectedEvent.location && (
+                    <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{selectedEvent.location}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Category</span>
+                <span className="inline-block text-xs font-extrabold text-sky-700 bg-sky-100 px-3 py-1 rounded-xl">
+                  {selectedEvent.category || 'Personal'}
+                </span>
+              </div>
+
+              {/* Description */}
+              {selectedEvent.notes || selectedEvent.description ? (
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Description</span>
+                  <p className="text-xs font-medium text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
+                    {selectedEvent.notes || selectedEvent.description}
+                  </p>
+                </div>
+              ) : null}
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditEvent(selectedEvent)}
+                  className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-emerald-600/20 transition-all text-xs"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Event
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleConfirmDeleteEvent(selectedEvent.id)}
+                  className="w-full py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-extrabold rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-colors text-xs"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Event
+                </button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* EDIT EVENT MODAL */}
+      {showEditEventModal && selectedEvent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">Edit Event</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditEventModal(false)
+                  setSelectedEvent(null)
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEvent} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-extrabold text-slate-700 mb-1">Event Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Team Meeting"
+                  value={editEventTitle}
+                  onChange={(e) => setEditEventTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-slate-700 mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Discuss project updates..."
+                  value={editEventNotes}
+                  onChange={(e) => setEditEventNotes(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-extrabold text-slate-700 mb-1">Start Date & Time</label>
+                  <input
+                    type="date"
+                    value={editEventStartDate}
+                    onChange={(e) => setEditEventStartDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold mb-1"
+                  />
+                  <input
+                    type="time"
+                    value={editEventStartTime}
+                    onChange={(e) => setEditEventStartTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-extrabold text-slate-700 mb-1">End Date & Time</label>
+                  <input
+                    type="date"
+                    value={editEventEndDate}
+                    onChange={(e) => setEditEventEndDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold mb-1"
+                  />
+                  <input
+                    type="time"
+                    value={editEventEndTime}
+                    onChange={(e) => setEditEventEndTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-slate-700 mb-1">Location</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Office, Room 302"
+                  value={editEventLocation}
+                  onChange={(e) => setEditEventLocation(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-slate-700 mb-1">Category</label>
+                <select
+                  value={editEventCategory}
+                  onChange={(e) => setEditEventCategory(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                >
+                  <option value="Work">Work</option>
+                  <option value="Personal">Personal</option>
+                  <option value="Health">Health</option>
+                  <option value="Family">Family</option>
+                  <option value="Reminder">Reminder</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="editIsAllDay"
+                  checked={editEventIsAllDay}
+                  onChange={(e) => setEditEventIsAllDay(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                />
+                <label htmlFor="editIsAllDay" className="font-extrabold text-slate-700 cursor-pointer">
+                  All day event
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowEditEventModal(false)
+                    setSelectedEvent(null)
+                  }}
+                  className="rounded-xl text-xs font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+                >
+                  Update Event
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* DELETE EVENT CONFIRM MODAL */}
+      {showDeleteConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-xl animate-in zoom-in-95 text-center">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900">Delete Event?</h3>
+              <p className="text-xs font-semibold text-slate-500 mt-1">
+                Are you sure you want to delete this event? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="w-full rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleDeleteEvent}
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold"
+              >
+                Delete Event
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* ADD EVENT MODAL */}
       {showAddEventModal && (
@@ -844,7 +1254,7 @@ export const CalendarPage = () => {
                 </div>
 
                 <div>
-                  <label className="block font-extrabold text-slate-700 mb-1">Time</label>
+                  <label className="block font-extrabold text-slate-700 mb-1">Start Time</label>
                   <input
                     type="time"
                     value={newEventTime}
@@ -855,10 +1265,20 @@ export const CalendarPage = () => {
               </div>
 
               <div>
+                <label className="block font-extrabold text-slate-700 mb-1">End Time</label>
+                <input
+                  type="time"
+                  value={newEventEndTime}
+                  onChange={(e) => setNewEventEndTime(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                />
+              </div>
+
+              <div>
                 <label className="block font-extrabold text-slate-700 mb-1">Location</label>
                 <input
                   type="text"
-                  placeholder="e.g., Chennai, Online"
+                  placeholder="e.g., Office, Online"
                   value={newEventLocation}
                   onChange={(e) => setNewEventLocation(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
@@ -866,7 +1286,7 @@ export const CalendarPage = () => {
               </div>
 
               <div>
-                <label className="block font-extrabold text-slate-700 mb-1">Notes</label>
+                <label className="block font-extrabold text-slate-700 mb-1">Notes / Description</label>
                 <textarea
                   rows={2}
                   placeholder="Additional event details..."
@@ -874,6 +1294,19 @@ export const CalendarPage = () => {
                   onChange={(e) => setNewEventNotes(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold resize-none"
                 />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="newIsAllDay"
+                  checked={newEventIsAllDay}
+                  onChange={(e) => setNewEventIsAllDay(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                />
+                <label htmlFor="newIsAllDay" className="font-extrabold text-slate-700 cursor-pointer">
+                  All day event
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
