@@ -166,16 +166,15 @@ export const createWorkout = async (userId, workoutData, exercises = []) => {
     workout_exercises: []
   }
 
-  const preparedExercises = exercises.map((e, index) => ({
+  const preparedExercises = exercises.map((e) => ({
     id: crypto.randomUUID(),
     workout_id: workoutId,
     user_id: userId,
-    exercise_name: e.name || e.exercise_name || 'Exercise',
+    name: e.name || e.exercise_name || 'Exercise',
     sets: parseInt(e.sets) || 3,
     reps: parseInt(e.reps) || 10,
-    weight: parseFloat(e.weight_kg || e.weight || 0),
-    completed: Boolean(e.completed),
-    sort_order: index
+    weight_kg: parseFloat(e.weight_kg || e.weight || 0),
+    notes: e.notes || ''
   }))
 
   newWorkout.workout_exercises = preparedExercises
@@ -771,16 +770,16 @@ export const getEvents = async (userId) => {
         .from('calendar_events')
         .select('*')
         .eq('user_id', userId)
-        .order('start_at', { ascending: true })
+        .order('start_time', { ascending: true })
 
       if (!error && data) {
         return data.map((item) => {
-          const startDate = item.start_at ? item.start_at.split('T')[0] : ''
-          const startTime = item.start_at && item.start_at.includes('T')
-            ? item.start_at.split('T')[1].substring(0, 5)
+          const startDate = item.start_time ? item.start_time.split('T')[0] : ''
+          const startTime = item.start_time && item.start_time.includes('T')
+            ? item.start_time.split('T')[1].substring(0, 5)
             : '09:00'
-          const endTime = item.end_at && item.end_at.includes('T')
-            ? item.end_at.split('T')[1].substring(0, 5)
+          const endTime = item.end_time && item.end_time.includes('T')
+            ? item.end_time.split('T')[1].substring(0, 5)
             : '10:00'
 
           return {
@@ -790,17 +789,16 @@ export const getEvents = async (userId) => {
             event_date: startDate,
             start_time: startTime,
             end_time: endTime,
-            is_all_day: Boolean(item.all_day),
-            category: item.color || 'Personal',
+            is_all_day: Boolean(item.is_all_day),
+            category: item.category || 'Personal',
             location: item.location || '',
             notes: item.description || '',
             status: 'pending',
-            created_at: item.created_at,
-            updated_at: item.updated_at
+            created_at: item.created_at
           }
         })
       }
-      console.warn('Supabase calendar_events table error, using local fallback:', error?.message)
+      if (error) console.warn('Supabase calendar_events fetch error:', error?.message)
     } catch (err) {
       console.warn('Supabase getEvents failed:', err.message)
     }
@@ -816,19 +814,19 @@ export const createEvent = async (userId, eventData) => {
   const startTime = eventData.start_time || '09:00'
   const endTime = eventData.end_time || '10:00'
 
-  const startAt = new Date(`${eventDate}T${startTime}:00`).toISOString()
-  const endAt = new Date(`${eventDate}T${endTime}:00`).toISOString()
+  const startTimeObj = new Date(`${eventDate}T${startTime}:00`).toISOString()
+  const endTimeObj = new Date(`${eventDate}T${endTime}:00`).toISOString()
 
   const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
     title: eventData.title,
     description: eventData.notes || eventData.description || '',
-    start_at: startAt,
-    end_at: endAt,
+    start_time: startTimeObj,
+    end_time: endTimeObj,
     location: eventData.location || '',
-    all_day: Boolean(eventData.is_all_day),
-    color: eventData.category || 'Personal'
+    is_all_day: Boolean(eventData.is_all_day),
+    category: eventData.category || 'general'
   }
 
   const localItem = {
@@ -843,17 +841,16 @@ export const createEvent = async (userId, eventData) => {
     location: eventData.location || '',
     notes: eventData.notes || '',
     status: 'pending',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: new Date().toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('calendar_events').insert([dbPayload]).select().single()
-      if (!error && data) return localItem
-    } catch (err) {
-      console.warn('Supabase createEvent failed:', err.message)
+    const { data, error } = await supabase.from('calendar_events').insert([dbPayload]).select().single()
+    if (error) {
+      console.error('Supabase createEvent error:', error.message)
+      throw error
     }
+    if (data) return localItem
   }
 
   const allEvents = getLocalData(`events_${userId}`, [])
@@ -863,44 +860,45 @@ export const createEvent = async (userId, eventData) => {
 }
 
 export const updateEvent = async (userId, eventId, updates) => {
-  const payload = { updated_at: new Date().toISOString() }
+  const payload = {}
 
   if (updates.title) payload.title = updates.title
   if (updates.notes || updates.description) payload.description = updates.notes || updates.description
   if (updates.location !== undefined) payload.location = updates.location
-  if (updates.is_all_day !== undefined) payload.all_day = Boolean(updates.is_all_day)
-  if (updates.category) payload.color = updates.category
+  if (updates.is_all_day !== undefined) payload.is_all_day = Boolean(updates.is_all_day)
+  if (updates.category) payload.category = updates.category
 
   if (updates.event_date || updates.start_time) {
     const eDate = updates.event_date || new Date().toISOString().split('T')[0]
     const sTime = updates.start_time || '09:00'
-    payload.start_at = new Date(`${eDate}T${sTime}:00`).toISOString()
+    payload.start_time = new Date(`${eDate}T${sTime}:00`).toISOString()
   }
   if (updates.event_date || updates.end_time) {
     const eDate = updates.event_date || new Date().toISOString().split('T')[0]
     const eTime = updates.end_time || '10:00'
-    payload.end_at = new Date(`${eDate}T${eTime}:00`).toISOString()
+    payload.end_time = new Date(`${eDate}T${eTime}:00`).toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .update(payload)
-        .eq('id', eventId)
-        .eq('user_id', userId)
-        .select()
-        .single()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn('Supabase updateEvent failed:', err.message)
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .update(payload)
+      .eq('id', eventId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase updateEvent error:', error.message)
+      throw error
     }
+    if (data) return data
   }
 
   const allEvents = getLocalData(`events_${userId}`, [])
   const index = allEvents.findIndex((e) => e.id === eventId)
   if (index !== -1) {
-    allEvents[index] = { ...allEvents[index], ...updates, updated_at: new Date().toISOString() }
+    allEvents[index] = { ...allEvents[index], ...updates }
     setLocalData(`events_${userId}`, allEvents)
     return allEvents[index]
   }
@@ -909,16 +907,16 @@ export const updateEvent = async (userId, eventId, updates) => {
 
 export const deleteEvent = async (userId, eventId) => {
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { error } = await supabase
-        .from('calendar_events')
-        .delete()
-        .eq('id', eventId)
-        .eq('user_id', userId)
-      if (!error) return true
-    } catch (err) {
-      console.warn('Supabase deleteEvent failed:', err.message)
+    const { error } = await supabase
+      .from('calendar_events')
+      .delete()
+      .eq('id', eventId)
+      .eq('user_id', userId)
+    if (error) {
+      console.error('Supabase deleteEvent error:', error.message)
+      throw error
     }
+    return true
   }
 
   let allEvents = getLocalData(`events_${userId}`, [])
@@ -930,28 +928,28 @@ export const deleteEvent = async (userId, eventId) => {
 // -----------------------------------------------------------------------------
 // WATER LOGS SERVICE
 // -----------------------------------------------------------------------------
-// -----------------------------------------------------------------------------
-// WATER LOGS SERVICE
-// -----------------------------------------------------------------------------
 export const getWaterLogs = async (userId, targetDate = null) => {
   if (isSupabaseConfigured && supabase) {
     try {
-      let query = supabase.from('water_logs').select('*').eq('user_id', userId)
+      let query = supabase
+        .from('water_logs')
+        .select('id, user_id, amount_ml, logged_date, logged_time, created_at')
+        .eq('user_id', userId)
       if (targetDate) {
-        query = query.gte('logged_at', `${targetDate}T00:00:00.000Z`).lte('logged_at', `${targetDate}T23:59:59.999Z`)
+        query = query.eq('logged_date', targetDate)
       }
-      const { data, error } = await query.order('logged_at', { ascending: false })
+      const { data, error } = await query.order('created_at', { ascending: false })
       if (!error && data) {
         return data.map((item) => ({
           id: item.id,
           user_id: item.user_id,
           amount_ml: item.amount_ml,
-          logged_date: item.logged_at ? item.logged_at.split('T')[0] : targetDate,
-          logged_time: item.logged_at && item.logged_at.includes('T') ? item.logged_at.split('T')[1].substring(0, 5) : '12:00',
-          created_at: item.created_at || item.logged_at
+          logged_date: item.logged_date || targetDate,
+          logged_time: item.logged_time || '12:00',
+          created_at: item.created_at
         }))
       }
-      console.warn('Supabase water_logs table error, using local fallback:', error?.message)
+      if (error) console.warn('Supabase water_logs fetch error:', error?.message)
     } catch (err) {
       console.warn('Supabase getWaterLogs failed:', err.message)
     }
@@ -967,29 +965,27 @@ export const getWaterLogs = async (userId, targetDate = null) => {
 export const addWaterLog = async (userId, logData) => {
   const lDate = logData.logged_date || new Date().toISOString().split('T')[0]
   const lTime = logData.logged_time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-  const loggedAt = new Date(`${lDate}T${lTime.length === 5 ? lTime : '12:00'}:00`).toISOString()
 
   const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
     amount_ml: parseInt(logData.amount_ml || 250),
-    logged_at: loggedAt
+    logged_date: lDate,
+    logged_time: lTime.length === 5 ? lTime : '12:00'
   }
 
   const localLog = {
     ...dbPayload,
-    logged_date: lDate,
-    logged_time: lTime,
     created_at: new Date().toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('water_logs').insert([dbPayload]).select().single()
-      if (!error && data) return localLog
-    } catch (err) {
-      console.warn('Supabase addWaterLog failed:', err.message)
+    const { data, error } = await supabase.from('water_logs').insert([dbPayload]).select().single()
+    if (error) {
+      console.error('Supabase addWaterLog error:', error.message)
+      throw error
     }
+    if (data) return localLog
   }
 
   const allLogs = getLocalData(`water_${userId}`, [])
@@ -999,28 +995,26 @@ export const addWaterLog = async (userId, logData) => {
 }
 
 export const updateWaterLog = async (userId, logId, updates) => {
-  const payload = { updated_at: new Date().toISOString() }
+  const payload = {}
 
   if (updates.amount_ml) payload.amount_ml = parseInt(updates.amount_ml)
-  if (updates.logged_date || updates.logged_time) {
-    const lDate = updates.logged_date || new Date().toISOString().split('T')[0]
-    const lTime = updates.logged_time || '12:00'
-    payload.logged_at = new Date(`${lDate}T${lTime}:00`).toISOString()
-  }
+  if (updates.logged_date) payload.logged_date = updates.logged_date
+  if (updates.logged_time) payload.logged_time = updates.logged_time
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('water_logs')
-        .update(payload)
-        .eq('id', logId)
-        .eq('user_id', userId)
-        .select()
-        .single()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn('Supabase updateWaterLog failed:', err.message)
+    const { data, error } = await supabase
+      .from('water_logs')
+      .update(payload)
+      .eq('id', logId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase updateWaterLog error:', error.message)
+      throw error
     }
+    if (data) return data
   }
 
   const allLogs = getLocalData(`water_${userId}`, [])
@@ -1035,16 +1029,16 @@ export const updateWaterLog = async (userId, logId, updates) => {
 
 export const deleteWaterLog = async (userId, logId) => {
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { error } = await supabase
-        .from('water_logs')
-        .delete()
-        .eq('id', logId)
-        .eq('user_id', userId)
-      if (!error) return true
-    } catch (err) {
-      console.warn('Supabase deleteWaterLog failed:', err.message)
+    const { error } = await supabase
+      .from('water_logs')
+      .delete()
+      .eq('id', logId)
+      .eq('user_id', userId)
+    if (error) {
+      console.error('Supabase deleteWaterLog error:', error.message)
+      throw error
     }
+    return true
   }
 
   let allLogs = getLocalData(`water_${userId}`, [])
@@ -1071,22 +1065,27 @@ export const getSleepLogs = async (userId) => {
     try {
       const { data, error } = await supabase
         .from('sleep_logs')
-        .select('*')
+        .select('id, user_id, sleep_time, wake_time, duration_minutes, quality_rating, notes, created_at')
         .eq('user_id', userId)
-        .order('sleep_start', { ascending: false })
-      if (!error && data) {
-        return data.map((item) => {
-          const startDate = item.sleep_start ? item.sleep_start.split('T')[0] : ''
-          const startTime = item.sleep_start && item.sleep_start.includes('T')
-            ? item.sleep_start.split('T')[1].substring(0, 5)
-            : '23:00'
-          const endTime = item.sleep_end && item.sleep_end.includes('T')
-            ? item.sleep_end.split('T')[1].substring(0, 5)
-            : '07:00'
-          const durationHours = item.duration_minutes ? Math.round((item.duration_minutes / 60) * 10) / 10 : 8.0
+        .order('created_at', { ascending: false })
 
-          const qualityMap = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very Good', 5: 'Excellent' }
-          const qualityStr = typeof item.quality === 'number' ? (qualityMap[item.quality] || 'Good') : (item.quality || 'Good')
+      if (!error && data) {
+        const qualityMap = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very Good', 5: 'Excellent' }
+        return data.map((item) => {
+          const startDate = item.sleep_time ? item.sleep_time.split('T')[0] : ''
+          const startTime = item.sleep_time && item.sleep_time.includes('T')
+            ? item.sleep_time.split('T')[1].substring(0, 5)
+            : '23:00'
+          const endTime = item.wake_time && item.wake_time.includes('T')
+            ? item.wake_time.split('T')[1].substring(0, 5)
+            : '07:00'
+          const durationHours = item.duration_minutes
+            ? Math.round((item.duration_minutes / 60) * 10) / 10
+            : 8.0
+
+          const qualityStr = typeof item.quality_rating === 'number'
+            ? (qualityMap[item.quality_rating] || 'Good')
+            : 'Good'
 
           return {
             id: item.id,
@@ -1101,7 +1100,7 @@ export const getSleepLogs = async (userId) => {
           }
         })
       }
-      console.warn('Supabase sleep_logs table error, using local fallback:', error?.message)
+      if (error) console.warn('Supabase sleep_logs table error, using local fallback:', error?.message)
     } catch (err) {
       console.warn('Supabase getSleepLogs failed:', err.message)
     }
@@ -1133,10 +1132,10 @@ export const addSleepLog = async (userId, logData) => {
   const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
-    sleep_start: sleepStart.toISOString(),
-    sleep_end: sleepEnd.toISOString(),
+    sleep_time: sleepStart.toISOString(),
+    wake_time: sleepEnd.toISOString(),
     duration_minutes: durationMinutes,
-    quality: qualityNum,
+    quality_rating: qualityNum,
     notes: logData.notes || ''
   }
 
@@ -1153,12 +1152,12 @@ export const addSleepLog = async (userId, logData) => {
   }
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('sleep_logs').insert([dbPayload]).select().single()
-      if (!error && data) return localLog
-    } catch (err) {
-      console.warn('Supabase addSleepLog failed:', err.message)
+    const { data, error } = await supabase.from('sleep_logs').insert([dbPayload]).select().single()
+    if (error) {
+      console.error('Supabase addSleepLog error:', error.message)
+      throw error
     }
+    if (data) return localLog
   }
 
   const allLogs = getLocalData(`sleep_${userId}`, [])
@@ -1168,12 +1167,12 @@ export const addSleepLog = async (userId, logData) => {
 }
 
 export const updateSleepLog = async (userId, logId, updates) => {
-  const payload = { updated_at: new Date().toISOString() }
+  const payload = {}
 
   if (updates.notes !== undefined) payload.notes = updates.notes
   if (updates.quality) {
     const qualityStringMap = { 'Poor': 1, 'Fair': 2, 'Good': 3, 'Very Good': 4, 'Excellent': 5 }
-    payload.quality = typeof updates.quality === 'number'
+    payload.quality_rating = typeof updates.quality === 'number'
       ? updates.quality
       : (qualityStringMap[updates.quality] || 3)
   }
@@ -1189,24 +1188,25 @@ export const updateSleepLog = async (userId, logId, updates) => {
       sleepEnd.setDate(sleepEnd.getDate() + 1)
     }
 
-    payload.sleep_start = sleepStart.toISOString()
-    payload.sleep_end = sleepEnd.toISOString()
+    payload.sleep_time = sleepStart.toISOString()
+    payload.wake_time = sleepEnd.toISOString()
     payload.duration_minutes = Math.max(0, Math.round((sleepEnd.getTime() - sleepStart.getTime()) / 60000))
   }
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('sleep_logs')
-        .update(payload)
-        .eq('id', logId)
-        .eq('user_id', userId)
-        .select()
-        .single()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn('Supabase updateSleepLog failed:', err.message)
+    const { data, error } = await supabase
+      .from('sleep_logs')
+      .update(payload)
+      .eq('id', logId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase updateSleepLog error:', error.message)
+      throw error
     }
+    if (data) return data
   }
 
   const allLogs = getLocalData(`sleep_${userId}`, [])
@@ -1221,16 +1221,17 @@ export const updateSleepLog = async (userId, logId, updates) => {
 
 export const deleteSleepLog = async (userId, logId) => {
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { error } = await supabase
-        .from('sleep_logs')
-        .delete()
-        .eq('id', logId)
-        .eq('user_id', userId)
-      if (!error) return true
-    } catch (err) {
-      console.warn('Supabase deleteSleepLog failed:', err.message)
+    const { error } = await supabase
+      .from('sleep_logs')
+      .delete()
+      .eq('id', logId)
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('Supabase deleteSleepLog error:', error.message)
+      throw error
     }
+    return true
   }
 
   let allLogs = getLocalData(`sleep_${userId}`, [])
@@ -1257,30 +1258,27 @@ export const getGoals = async (userId) => {
     try {
       const { data, error } = await supabase
         .from('goals')
-        .select('*')
+        .select('id, user_id, title, description, target_date, status, progress_percentage, created_at, updated_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
       if (!error && data) {
         return data.map((g) => {
-          const target = g.target_value || 100
-          const current = g.current_value || 0
-          const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
+          const pct = typeof g.progress_percentage === 'number' ? g.progress_percentage : 0
 
           const statusMap = {
-            'active': pct > 0 ? 'In Progress' : 'Not Started',
+            'not_started': 'Not Started',
+            'in_progress': 'In Progress',
+            'active': 'In Progress',
             'completed': 'Completed',
-            'paused': 'Paused',
-            'cancelled': 'Cancelled'
+            'archived': 'Archived'
           }
-          const statusStr = statusMap[g.status] || 'In Progress'
+          const statusStr = statusMap[g.status] || (pct >= 100 ? 'Completed' : 'In Progress')
 
           return {
             id: g.id,
             user_id: g.user_id,
             title: g.title,
             description: g.description || '',
-            category: g.category || 'Personal',
-            start_date: g.start_date,
             target_date: g.target_date,
             progress_percentage: pct,
             status: statusStr,
@@ -1305,13 +1303,11 @@ export const getGoals = async (userId) => {
 export const createGoal = async (userId, goalData) => {
   const progressPct = Math.min(100, Math.max(0, parseInt(goalData.progress_percentage || 0)))
 
-  let dbStatus = 'active'
+  let dbStatus = 'in_progress'
   if (progressPct >= 100 || goalData.status === 'Completed') {
     dbStatus = 'completed'
-  } else if (goalData.status === 'Paused') {
-    dbStatus = 'paused'
-  } else if (goalData.status === 'Cancelled') {
-    dbStatus = 'cancelled'
+  } else if (goalData.status === 'Not Started') {
+    dbStatus = 'not_started'
   }
 
   // Strictly valid database columns for public.goals table
@@ -1320,11 +1316,8 @@ export const createGoal = async (userId, goalData) => {
     user_id: userId,
     title: goalData.title,
     description: goalData.description || '',
-    target_value: 100,
-    current_value: progressPct,
-    unit: '%',
-    start_date: goalData.start_date || new Date().toISOString().split('T')[0],
     target_date: goalData.target_date || null,
+    progress_percentage: progressPct,
     status: dbStatus
   }
 
@@ -1333,8 +1326,6 @@ export const createGoal = async (userId, goalData) => {
     user_id: userId,
     title: goalData.title,
     description: goalData.description || '',
-    category: goalData.category || 'Personal',
-    start_date: dbPayload.start_date,
     target_date: dbPayload.target_date,
     progress_percentage: progressPct,
     status: progressPct >= 100 ? 'Completed' : (goalData.status || 'In Progress'),
@@ -1362,25 +1353,22 @@ export const updateGoal = async (userId, goalId, updates) => {
 
   if (updates.title) payload.title = updates.title
   if (updates.description !== undefined) payload.description = updates.description
-  if (updates.start_date) payload.start_date = updates.start_date
   if (updates.target_date !== undefined) payload.target_date = updates.target_date
 
   if (typeof updates.progress_percentage === 'number') {
     const pct = Math.min(100, Math.max(0, updates.progress_percentage))
-    payload.current_value = pct
-    payload.target_value = 100
+    payload.progress_percentage = pct
     if (pct >= 100) {
       payload.status = 'completed'
-    } else if (payload.status === 'completed' || updates.status === 'In Progress') {
-      payload.status = 'active'
+    } else if (updates.status === 'In Progress') {
+      payload.status = 'in_progress'
     }
   }
 
   if (updates.status) {
     if (updates.status === 'Completed') payload.status = 'completed'
-    else if (updates.status === 'Paused') payload.status = 'paused'
-    else if (updates.status === 'Cancelled') payload.status = 'cancelled'
-    else if (updates.status === 'In Progress' || updates.status === 'Not Started') payload.status = 'active'
+    else if (updates.status === 'Not Started') payload.status = 'not_started'
+    else if (updates.status === 'In Progress') payload.status = 'in_progress'
   }
 
   if (isSupabaseConfigured && supabase) {

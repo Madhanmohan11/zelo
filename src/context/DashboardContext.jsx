@@ -197,22 +197,22 @@ export const DashboardProvider = ({ children }) => {
       if (isSupabaseConfigured && supabase) {
         const { data, error } = await supabase
           .from('calendar_events')
-          .select('id, title, start_at, end_at, color, location, description, all_day')
+          .select('id, title, start_time, end_time, category, location, description, is_all_day')
           .eq('user_id', userId)
-          .order('start_at', { ascending: true })
+          .order('start_time', { ascending: true })
 
         if (!error && data) {
           const events = data
-            .filter((item) => item.start_at && item.start_at.startsWith(todayStr))
+            .filter((item) => item.start_time && item.start_time.startsWith(todayStr))
             .map((item) => ({
               id: item.id,
               title: item.title,
-              event_date: item.start_at.split('T')[0],
-              start_time: item.start_at.includes('T') ? item.start_at.split('T')[1].substring(0, 5) : '09:00',
-              end_time: item.end_at && item.end_at.includes('T') ? item.end_at.split('T')[1].substring(0, 5) : '10:00',
-              category: item.color || 'Personal',
+              event_date: item.start_time.split('T')[0],
+              start_time: item.start_time.includes('T') ? item.start_time.split('T')[1].substring(0, 5) : '09:00',
+              end_time: item.end_time && item.end_time.includes('T') ? item.end_time.split('T')[1].substring(0, 5) : '10:00',
+              category: item.category || 'Personal',
               location: item.location || '',
-              is_all_day: Boolean(item.all_day)
+              is_all_day: Boolean(item.is_all_day)
             }))
           todayEventsCount = events.length
           todayEventsList = events.slice(0, 5)
@@ -362,12 +362,12 @@ export const DashboardProvider = ({ children }) => {
       if (isSupabaseConfigured && supabase) {
         const { data, error } = await supabase
           .from('water_logs')
-          .select('amount_ml, logged_at')
+          .select('amount_ml, logged_date, created_at')
           .eq('user_id', userId)
 
         if (!error && data) {
           totalWaterMl = data.reduce((acc, curr) => {
-            const loggedDate = (curr.logged_at || '').split('T')[0]
+            const loggedDate = curr.logged_date || (curr.created_at || '').split('T')[0]
             return loggedDate === todayStr ? acc + (parseInt(curr.amount_ml) || 0) : acc
           }, 0)
         } else {
@@ -404,9 +404,9 @@ export const DashboardProvider = ({ children }) => {
       if (isSupabaseConfigured && supabase) {
         const { data, error } = await supabase
           .from('sleep_logs')
-          .select('sleep_start, sleep_end, duration_minutes, quality')
+          .select('sleep_time, wake_time, duration_minutes, quality_rating')
           .eq('user_id', userId)
-          .order('sleep_start', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1)
 
         if (!error && data && data.length > 0) {
@@ -444,11 +444,11 @@ export const DashboardProvider = ({ children }) => {
       if (isSupabaseConfigured && supabase) {
         const { data, error } = await supabase
           .from('goals')
-          .select('id, title, status, target_value, current_value')
+          .select('id, title, status, progress_percentage, target_date')
           .eq('user_id', userId)
 
         if (!error && data) {
-          const active = data.filter((g) => g.status !== 'completed' && g.status !== 'cancelled')
+          const active = data.filter((g) => g.status !== 'completed' && g.status !== 'archived')
           activeCount = active.length
           goalsList = active.slice(0, 5)
         } else {
