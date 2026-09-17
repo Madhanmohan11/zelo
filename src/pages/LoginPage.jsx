@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { LoginPWABanner } from '../components/pwa/LoginPWABanner'
 
 export const LoginPage = () => {
   const navigate = useNavigate()
@@ -114,6 +115,9 @@ export const LoginPage = () => {
             </Link>
           </div>
         </div>
+
+        {/* PWA Mobile-First Installation Banner */}
+        <LoginPWABanner />
       </div>
     </div>
   )

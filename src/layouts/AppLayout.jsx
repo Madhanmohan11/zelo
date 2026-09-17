@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext'
 import { QuickAddModal } from '../components/QuickAddModal'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { notifyDataUpdated } from '../utils/events'
+import { DesktopMobileNotice } from '../components/pwa/DesktopMobileNotice'
 
 export const AppLayout = () => {
   const { profile } = useAuth()
@@ -49,7 +50,10 @@ export const AppLayout = () => {
   const isExpensesPage = location.pathname.startsWith('/expenses')
 
   return (
-    <div className="min-h-screen ambient-bg text-slate-900 font-sans selection:bg-emerald-200 flex flex-col items-center">
+    <div className="min-h-screen ambient-bg text-slate-900 font-sans selection:bg-emerald-200 flex flex-col items-center w-full">
+      {/* DESKTOP MOBILE-FIRST EXPERIENCE NOTICE */}
+      <DesktopMobileNotice />
+
       {/* CLEAN TOP HEADER — INCREASED HEIGHT & CENTER ALIGNED */}
       <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 pt-safe shadow-xs">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between min-h-[80px] sm:min-h-[88px]">
