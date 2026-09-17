@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React from 'react'
 import { useOutletContext, useNavigate } from 'react-router-dom'
 import { LoadingState } from '../components/ui/LoadingState'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useDashboard } from '../context/DashboardContext'
 import {
-  getMeals,
-  getWorkouts,
-  getRememberItems,
-  getExpenses,
-  getTasks,
   updateMeal,
   updateWorkout,
   updateRememberItem
@@ -20,74 +16,37 @@ import { TodaySchedule } from '../components/home/TodaySchedule'
 import { MoneySnapshot } from '../components/home/MoneySnapshot'
 import { DontForget } from '../components/home/DontForget'
 import { WellnessSection } from '../components/home/WellnessSection'
-
-import { useModulePreferences } from '../context/ModuleContext'
+import { RefreshCw } from 'lucide-react'
 
 export const TodayPage = () => {
   const { user, profile, userSettings } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
   const { openQuickAdd } = useOutletContext() || {}
-  const { isModuleEnabled } = useModulePreferences()
 
-  const [loading, setLoading] = useState(true)
-  const [todayMeals, setTodayMeals] = useState([])
-  const [todayWorkouts, setTodayWorkouts] = useState([])
-  const [rememberItems, setRememberItems] = useState([])
-  const [todayExpenses, setTodayExpenses] = useState([])
-  const [userTasks, setUserTasks] = useState([])
-
-  const todayStr = new Date().toISOString().split('T')[0]
-
-  const loadDashboardData = useCallback(async () => {
-    if (!user) return
-    setLoading(true)
-    try {
-      const [meals, workouts, remembers, expenses, tasks] = await Promise.all([
-        getMeals(user.id, todayStr),
-        getWorkouts(user.id, todayStr),
-        getRememberItems(user.id),
-        getExpenses(user.id),
-        getTasks(user.id)
-      ])
-
-      setTodayMeals(meals || [])
-      setTodayWorkouts(workouts || [])
-
-      const activeRemembers = (remembers || []).filter((r) =>
-        ['waiting', 'ready'].includes((r.status || '').toLowerCase())
-      )
-      setRememberItems(activeRemembers)
-
-      const expensesToday = (expenses || []).filter((e) => {
-        const spentDate = (e.spent_at || e.created_at || '').split('T')[0]
-        return spentDate === todayStr
-      })
-      setTodayExpenses(expensesToday)
-      setUserTasks(tasks || [])
-    } catch (err) {
-      console.error('Error loading dashboard data:', err)
-      showToast('Failed to sync dashboard data', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [user, todayStr, showToast])
-
-  useEffect(() => {
-    loadDashboardData()
-
-    const handleUpdate = () => loadDashboardData()
-    window.addEventListener('zelo_data_updated', handleUpdate)
-    return () => window.removeEventListener('zelo_data_updated', handleUpdate)
-  }, [loadDashboardData])
+  const {
+    expensesSummary,
+    tasksSummary,
+    calendarSummary,
+    rememberSummary,
+    mealsSummary,
+    workoutsSummary,
+    waterSummary,
+    sleepSummary,
+    goalsSummary,
+    isInitialLoading,
+    isRefreshing,
+    refreshMealsSummary,
+    refreshWorkoutsSummary,
+    refreshRememberSummary,
+    refreshAllSummaries
+  } = useDashboard()
 
   const handleToggleMealStatus = async (meal) => {
     const nextStatus = meal.status === 'completed' ? 'pending' : 'completed'
     try {
       await updateMeal(user.id, meal.id, { status: nextStatus })
-      setTodayMeals((prev) =>
-        prev.map((m) => (m.id === meal.id ? { ...m, status: nextStatus } : m))
-      )
+      refreshMealsSummary()
       showToast(`Meal marked as ${nextStatus}`, 'success')
     } catch (e) {
       showToast('Failed to update meal', 'error')
@@ -98,9 +57,7 @@ export const TodayPage = () => {
     const nextStatus = workout.status === 'completed' ? 'planned' : 'completed'
     try {
       await updateWorkout(user.id, workout.id, { status: nextStatus })
-      setTodayWorkouts((prev) =>
-        prev.map((w) => (w.id === workout.id ? { ...w, status: nextStatus } : w))
-      )
+      refreshWorkoutsSummary()
       showToast(`Workout marked as ${nextStatus}`, 'success')
     } catch (e) {
       showToast('Failed to update workout', 'error')
@@ -110,52 +67,59 @@ export const TodayPage = () => {
   const handleMarkCollected = async (item) => {
     try {
       await updateRememberItem(user.id, item.id, { status: 'collected' })
-      setRememberItems((prev) => prev.filter((r) => r.id !== item.id))
+      refreshRememberSummary()
       showToast(`Marked "${item.title}" as Collected`, 'success')
     } catch (e) {
       showToast('Failed to update remember item', 'error')
     }
   }
 
-  const todaySpentTotal = todayExpenses.reduce(
-    (acc, curr) => acc + (parseFloat(curr.amount) || 0),
-    0
-  )
-
   const userName =
     profile?.full_name?.split(' ')[0] ||
     user?.user_metadata?.full_name?.split(' ')[0] ||
     'Madhan'
 
-  // Combine items into today's schedule
+  // Combine preview items into today's schedule
   const scheduleItems = [
-    ...todayMeals.map((m) => ({ ...m, type: 'meal', time: m.scheduled_time })),
-    ...todayWorkouts.map((w) => ({ ...w, type: 'workout', time: w.scheduled_time })),
-    ...rememberItems.map((r) => ({ ...r, type: 'remember', time: r.given_date }))
+    ...(mealsSummary.todayMeals || []).map((m) => ({ ...m, type: 'meal', time: m.scheduled_time })),
+    ...(workoutsSummary.todayWorkouts || []).map((w) => ({ ...w, type: 'workout', time: w.scheduled_time })),
+    ...(rememberSummary.activeRemembers || []).map((r) => ({ ...r, type: 'remember', time: r.given_date }))
   ]
 
-  if (loading) {
+  // Render full-page loader only on first boot when no cached summary exists
+  if (isInitialLoading) {
     return <LoadingState message="Syncing your ZELO dashboard..." />
   }
 
+  const waterLoggedL = Math.round((waterSummary.totalWaterMl / 1000) * 10) / 10
+  const waterTargetL = Math.round((waterSummary.targetWaterMl / 1000) * 10) / 10
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 max-w-2xl mx-auto pb-12">
+    <div className="space-y-6 animate-in fade-in duration-300 max-w-2xl mx-auto pb-12 relative">
+      {/* BACKGROUND REFRESHING INDICATOR (NON-BLOCKING) */}
+      {isRefreshing && (
+        <div className="flex items-center justify-center gap-1.5 py-1 px-3 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-full text-xs font-semibold w-fit mx-auto shadow-2xs animate-pulse">
+          <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+          <span>Updating dashboard...</span>
+        </div>
+      )}
+
       {/* 1. DYNAMIC TIME-BASED HERO SECTION */}
       <DynamicHero
         userName={userName}
         customSlogan={userSettings?.custom_slogan}
         dynamicHeroEnabled={userSettings?.dynamic_hero_enabled ?? true}
         autoTimeBgEnabled={userSettings?.auto_time_bg_enabled ?? true}
-        onSloganUpdated={() => loadDashboardData()}
+        onSloganUpdated={() => refreshAllSummaries()}
       />
 
       {/* 2. TODAY'S OVERVIEW (ENABLED MODULES GRID) */}
       <TodayOverview
-        spentTotal={todaySpentTotal}
-        tasksCompleted={userTasks.filter((t) => t.status === 'completed').length}
-        tasksTotal={userTasks.length}
-        eventsTodayCount={0}
-        rememberPendingCount={rememberItems.length}
+        spentTotal={expensesSummary.spentTotalToday}
+        tasksCompleted={tasksSummary.completedToday}
+        tasksTotal={tasksSummary.totalToday}
+        eventsTodayCount={calendarSummary.todayEventsCount}
+        rememberPendingCount={rememberSummary.pendingCount}
       />
 
       {/* 3. TODAY'S SCHEDULE (TIMELINE / EMPTY STATE) */}
@@ -169,24 +133,26 @@ export const TodayPage = () => {
 
       {/* 4. SPENDING TODAY (MONEY SNAPSHOT) */}
       <MoneySnapshot
-        spentTotal={todaySpentTotal}
+        spentTotal={expensesSummary.spentTotalToday}
         dailyBudget={userSettings?.daily_expense_budget || 1000}
       />
 
       {/* 5. ATTENTION / REMINDERS (DON'T FORGET) */}
       <DontForget
-        remembers={rememberItems}
+        remembers={rememberSummary.activeRemembers}
         onMarkCollected={handleMarkCollected}
       />
 
       {/* 6. OPTIONAL WELLNESS & HABITS SECTION */}
       <WellnessSection
-        waterLog={1.8}
-        waterTarget={2.5}
-        sleepHours={8}
-        todayMeals={todayMeals}
-        todayWorkouts={todayWorkouts}
+        waterLog={waterLoggedL}
+        waterTarget={waterTargetL}
+        sleepHours={sleepSummary.lastNightDuration}
+        todayMeals={mealsSummary.todayMeals}
+        todayWorkouts={workoutsSummary.todayWorkouts}
+        activeGoalsCount={goalsSummary.activeCount}
       />
     </div>
   )
 }
+
