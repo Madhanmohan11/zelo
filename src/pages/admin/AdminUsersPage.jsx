@@ -4,7 +4,7 @@ import { FilterBar } from '../../components/admin/FilterBar';
 import { UserTable } from '../../components/admin/UserTable';
 import { Pagination } from '../../components/admin/Pagination';
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
-import { mockAdminService } from '../../admin/services/mockAdminService';
+import { adminService } from '../../services/adminService';
 import { useSearchParams } from 'react-router-dom';
 
 export function AdminUsersPage() {
@@ -38,7 +38,7 @@ export function AdminUsersPage() {
 
   const fetchUsers = () => {
     setLoading(true);
-    mockAdminService
+    adminService
       .getUsers({
         search,
         filterStatus: statusFilter,
@@ -49,6 +49,10 @@ export function AdminUsersPage() {
       })
       .then((res) => {
         setUserData(res);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load users:', err);
         setLoading(false);
       });
   };

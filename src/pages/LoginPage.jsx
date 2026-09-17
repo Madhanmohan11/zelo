@@ -28,11 +28,24 @@ export const LoginPage = () => {
 
     setIsLoading(true)
     try {
-      await login({ email, password })
+      const result = await login({ email, password })
+      if (result?.error) {
+        showToast(result.error, 'error')
+        return
+      }
       showToast('Welcome back to ZELO!', 'success')
-      navigate(from, { replace: true })
+      if (result?.role === 'admin') {
+        navigate('/admin', { replace: true })
+      } else if (result?.role === 'user') {
+        const targetRoute = location.state?.from?.pathname && location.state.from.pathname !== '/login' && !location.state.from.pathname.startsWith('/admin')
+          ? location.state.from.pathname
+          : '/today'
+        navigate(targetRoute, { replace: true })
+      } else {
+        showToast('Invalid account role assigned. Please contact support.', 'error')
+      }
     } catch (err) {
-      showToast(err.message || 'Invalid email or password', 'error')
+      showToast(err?.message || 'Invalid email or password', 'error')
     } finally {
       setIsLoading(false)
     }

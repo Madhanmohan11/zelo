@@ -3,15 +3,17 @@ import { Users, UserCheck, UserPlus, TrendingUp, Sparkles } from 'lucide-react';
 import { StatCard } from '../../components/admin/StatCard';
 import { ChartCard, GrowthAreaChart, DauBarChart, FeatureUsageBars } from '../../components/admin/ChartCard';
 import { ActivityTimeline } from '../../components/admin/ActivityTimeline';
-import { mockAdminService } from '../../admin/services/mockAdminService';
+import { adminService } from '../../services/adminService';
+import { useAuth } from '../../context/AuthContext';
 
 export function AdminDashboard() {
+  const { user, profile } = useAuth();
   const [data, setData] = useState(null);
   const [timeframe, setTimeframe] = useState('7d');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    mockAdminService.getDashboardOverview().then((res) => {
+    adminService.getDashboardOverview().then((res) => {
       setData(res);
       setLoading(false);
     });
@@ -28,7 +30,8 @@ export function AdminDashboard() {
     );
   }
 
-  const { overview, userGrowth, dailyActiveUsers, featureUsage, recentActivities } = data;
+  const { overview, userGrowth, dailyActiveUsers, featureUsage, recentActivities, isLiveDatabase } = data;
+  const adminName = profile?.full_name || user?.user_metadata?.full_name || 'Admin';
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -39,7 +42,7 @@ export function AdminDashboard() {
             <Sparkles className="w-4 h-4" /> ZELO Platform Overview
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-            Good evening, Admin
+            Welcome, {adminName}
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-1">
             Here is what is happening across ZELO users today.
@@ -48,7 +51,7 @@ export function AdminDashboard() {
 
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs text-xs font-semibold text-slate-700">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          Live Metrics (Mock Data)
+          {isLiveDatabase ? 'Live Supabase Metrics' : 'Live Metrics (Mock Preview)'}
         </div>
       </div>
 
