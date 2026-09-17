@@ -34,9 +34,10 @@ import {
   getTasks,
   getEvents,
   createEvent,
-  deleteEvent,
-  updateEvent
+  updateEvent,
+  deleteEvent
 } from '../services/dataService'
+import { getPriorityDisplayLabel } from '../utils/priority'
 import { getTamilDateDetails } from '../services/tamilCalendarService'
 import { getHolidaysForDate, getHolidaysForMonth, getHolidaysForYear, HOLIDAY_CATEGORIES } from '../services/holidayService'
 import { getPanchangamTimings, DEFAULT_LOCATION } from '../services/panchangamService'
@@ -810,7 +811,7 @@ export const CalendarPage = () => {
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          Priority: {task.priority || 'Normal'}
+                          Priority: {getPriorityDisplayLabel(task.priority)}
                         </p>
                       </div>
                     </div>

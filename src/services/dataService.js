@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { notifyDataUpdated } from '../utils/events'
+import { mapPriorityToDb, mapPriorityToUi } from '../utils/priority'
 
 // Helper for LocalStorage fallback persistence
 export const getLocalData = (key, defaultVal = []) => {
@@ -744,6 +745,7 @@ export const getTasks = async (userId) => {
           }
           return {
             ...task,
+            priority: mapPriorityToUi(task.priority),
             due_date: dueDateStr,
             due_time: dueTimeStr
           }
@@ -770,7 +772,7 @@ export const createTask = async (userId, taskData) => {
     user_id: userId,
     title: taskData.title,
     description: taskData.description || '',
-    priority: taskData.priority || 'medium',
+    priority: mapPriorityToDb(taskData.priority),
     status: taskData.status || 'pending',
     due_date: formattedDueDate,
     category: taskData.category || 'general'
@@ -831,7 +833,7 @@ export const updateTask = async (userId, taskId, updates) => {
   const dbPayload = {}
   if (updates.title !== undefined) dbPayload.title = updates.title
   if (updates.description !== undefined) dbPayload.description = updates.description
-  if (updates.priority !== undefined) dbPayload.priority = updates.priority
+  if (updates.priority !== undefined) dbPayload.priority = mapPriorityToDb(updates.priority)
   if (updates.status !== undefined) dbPayload.status = updates.status
   if (updates.category !== undefined) dbPayload.category = updates.category
 
