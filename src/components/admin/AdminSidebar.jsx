@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,10 +13,16 @@ import {
   X
 } from 'lucide-react';
 import logoImg from '../../assets/Logo.png';
+import { useAuth } from '../../context/AuthContext';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 export function AdminSidebar({ mobileOpen, onMobileClose }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, profile, logout } = useAuth();
+
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const navItems = [
     { label: 'Dashboard', path: '/admin', icon: LayoutDashboard, exact: true },
@@ -28,10 +34,27 @@ export function AdminSidebar({ mobileOpen, onMobileClose }) {
     { label: 'Settings', path: '/admin/settings', icon: Settings }
   ];
 
-  const handleLogoutClick = () => {
-    alert('Admin logout (UI-only). Real authentication will be connected in the next step!');
-    navigate('/login');
+  const handleExecuteLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      setIsLogoutModalOpen(false);
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Logout failed:', err);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
+
+  const adminName = profile?.full_name || user?.user_metadata?.full_name || 'ZELO Admin';
+  const adminEmail = user?.email || 'admin@zelo.app';
+  const initials = adminName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || 'ZA';
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-white border-r border-slate-200/80 w-64 select-none">
@@ -100,17 +123,18 @@ export function AdminSidebar({ mobileOpen, onMobileClose }) {
           className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-200/60 transition-all group cursor-pointer"
         >
           <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-xs border border-teal-200">
-            ZA
+            {initials}
           </div>
           <div className="flex-1 overflow-hidden">
-            <div className="text-xs font-bold text-slate-900 truncate">ZELO Admin</div>
-            <div className="text-[10px] font-medium text-slate-500 truncate">admin@zelo.app</div>
+            <div className="text-xs font-bold text-slate-900 truncate">{adminName}</div>
+            <div className="text-[10px] font-medium text-slate-500 truncate">{adminEmail}</div>
           </div>
           <User className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
         </NavLink>
 
         <button
-          onClick={handleLogoutClick}
+          type="button"
+          onClick={() => setIsLogoutModalOpen(true)}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-200/60 cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
@@ -137,6 +161,19 @@ export function AdminSidebar({ mobileOpen, onMobileClose }) {
           </div>
         </div>
       )}
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleExecuteLogout}
+        title="Sign Out of Admin Panel?"
+        message="Are you sure you want to sign out of your ZELO admin account?"
+        confirmText="Sign Out"
+        isLoading={isLoggingOut}
+        variant="danger"
+      />
     </>
   );
 }
+

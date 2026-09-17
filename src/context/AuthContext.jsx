@@ -17,6 +17,8 @@ const MOCK_AUTH_KEY = 'zelo_mock_session'
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [profileError, setProfileError] = useState(null)
   const [userSettings, setUserSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState(null)
@@ -33,6 +35,8 @@ export const AuthProvider = ({ children }) => {
           if (session?.user) {
             setUser(session.user)
             await loadUserData(session.user.id)
+          } else {
+            setProfileLoading(false)
           }
 
           const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -42,6 +46,8 @@ export const AuthProvider = ({ children }) => {
             } else {
               setUser(null)
               setProfile(null)
+              setProfileError(null)
+              setProfileLoading(false)
               setUserSettings(null)
             }
           })
@@ -56,10 +62,13 @@ export const AuthProvider = ({ children }) => {
             const mockUser = JSON.parse(rawSession)
             setUser(mockUser)
             await loadUserData(mockUser.id)
+          } else {
+            setProfileLoading(false)
           }
         }
       } catch (err) {
         console.error('Auth initialization error:', err)
+        setProfileLoading(false)
       } finally {
         if (mounted) setLoading(false)
       }
@@ -90,7 +99,20 @@ export const AuthProvider = ({ children }) => {
   }
 
   const loadUserData = async (userId) => {
-    if (!userId) return
+    if (!userId) {
+      setProfile(null)
+      setProfileError(null)
+      setProfileLoading(false)
+      return { profile: null, role: null, error: null }
+    }
+
+    setProfileLoading(true)
+    setProfileError(null)
+
+    let loadedProfile = null
+    let roleResult = null
+    let errorResult = null
+
     try {
       let p = await getUserProfile(userId)
       let s = await getUserSettings(userId)
@@ -107,7 +129,8 @@ export const AuthProvider = ({ children }) => {
             'ZELO User'
 
           p = await createUserProfile(userId, {
-            full_name: defaultName
+            full_name: defaultName,
+            role: 'user'
           })
         } catch (repairErr) {
           console.warn('Profile auto-creation error:', repairErr)
@@ -126,12 +149,17 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      const activeProfile = p || {
-        id: userId,
-        full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'ZELO User',
-        avatar_url: null,
-        onboarding_completed: true
+      if (!p) {
+        errorResult = 'Profile missing. Could not load account profile.'
+      } else if (p.role !== 'admin' && p.role !== 'user') {
+        errorResult = `Invalid account role '${p.role || 'unknown'}' assigned. Please contact support.`
       }
+
+      loadedProfile = p
+      roleResult = p?.role || null
+
+      setProfile(p || null)
+      setProfileError(errorResult)
 
       const activeSettings = s || {
         user_id: userId,
@@ -142,15 +170,20 @@ export const AuthProvider = ({ children }) => {
         notifications_enabled: false,
         theme: 'light'
       }
-
-      setProfile(activeProfile)
       setUserSettings(activeSettings)
 
       // Apply theme preference
       const activeTheme = activeSettings.theme || localStorage.getItem('zelo_theme') || 'light'
       applyTheme(activeTheme)
+
+      return { profile: loadedProfile, role: roleResult, error: errorResult }
     } catch (e) {
       console.warn('Failed to load user profile & settings:', e)
+      errorResult = e?.message || 'Failed to load user profile.'
+      setProfileError(errorResult)
+      return { profile: null, role: null, error: errorResult }
+    } finally {
+      setProfileLoading(false)
     }
   }
 
@@ -219,11 +252,12 @@ export const AuthProvider = ({ children }) => {
       })
       if (error) throw error
       setUser(data.user)
+      let loadRes = { profile: null, role: null, error: null }
       if (data.user) {
-        await loadUserData(data.user.id)
+        loadRes = await loadUserData(data.user.id)
       }
       setPendingVerificationEmail(null)
-      return data
+      return { user: data.user, profile: loadRes.profile, role: loadRes.role, error: loadRes.error }
     } else {
       // Mock OTP Verification (Accepts valid 6-digit format or 123456)
       if (!token || token.length !== 6) {
@@ -239,15 +273,16 @@ export const AuthProvider = ({ children }) => {
       // Save profile
       await updateUserProfile(mockUser.id, {
         full_name: mockUser.user_metadata.full_name || 'ZELO User',
+        role: 'user',
         onboarding_completed: false
       })
 
       localStorage.setItem(MOCK_AUTH_KEY, JSON.stringify(mockUser))
       localStorage.removeItem('zelo_pending_user')
       setUser(mockUser)
-      await loadUserData(mockUser.id)
+      const loadRes = await loadUserData(mockUser.id)
       setPendingVerificationEmail(null)
-      return { user: mockUser }
+      return { user: mockUser, profile: loadRes.profile, role: loadRes.role, error: loadRes.error }
     }
   }
 
@@ -275,43 +310,62 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error
       setUser(data.user)
       if (data.user) {
-        await loadUserData(data.user.id)
+        const loadResult = await loadUserData(data.user.id)
+        return {
+          user: data.user,
+          profile: loadResult.profile,
+          role: loadResult.role,
+          error: loadResult.error
+        }
       }
-      return data
+      return { user: null, profile: null, role: null, error: 'User login failed' }
     } else {
       // Mock Login Mode
+      let mockUser = null
       const rawSession = localStorage.getItem(MOCK_AUTH_KEY)
       if (rawSession) {
         const existing = JSON.parse(rawSession)
         if (existing.email === email) {
-          setUser(existing)
-          await loadUserData(existing.id)
-          return { user: existing }
+          mockUser = existing
         }
       }
-      // Demo fallback user
-      const mockUser = {
-        id: 'user_demo_123',
-        email,
-        user_metadata: { full_name: 'ZELO User' }
+      if (!mockUser) {
+        // Demo fallback user
+        mockUser = {
+          id: 'user_demo_123',
+          email,
+          user_metadata: { full_name: 'ZELO User' }
+        }
       }
       localStorage.setItem(MOCK_AUTH_KEY, JSON.stringify(mockUser))
       setUser(mockUser)
-      await loadUserData(mockUser.id)
-      return { user: mockUser }
+      const loadResult = await loadUserData(mockUser.id)
+      return {
+        user: mockUser,
+        profile: loadResult.profile,
+        role: loadResult.role,
+        error: loadResult.error
+      }
     }
   }
 
   // Logout User
   const logout = async () => {
-    if (isSupabaseConfigured && supabase) {
-      await supabase.auth.signOut()
-    } else {
-      localStorage.removeItem(MOCK_AUTH_KEY)
+    try {
+      if (isSupabaseConfigured && supabase) {
+        await supabase.auth.signOut()
+      } else {
+        localStorage.removeItem(MOCK_AUTH_KEY)
+      }
+    } catch (e) {
+      console.warn('Logout error:', e)
+    } finally {
+      setUser(null)
+      setProfile(null)
+      setProfileError(null)
+      setProfileLoading(false)
+      setUserSettings(null)
     }
-    setUser(null)
-    setProfile(null)
-    setUserSettings(null)
   }
 
   return (
@@ -319,6 +373,9 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         profile,
+        profileLoading,
+        profileError,
+        userRole: profile?.role || null,
         userSettings,
         loading,
         pendingVerificationEmail,
@@ -346,3 +403,4 @@ export const useAuth = () => {
   }
   return context
 }
+

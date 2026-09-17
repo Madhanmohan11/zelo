@@ -16,7 +16,7 @@ import {
 import { UserStatusBadge } from '../../components/admin/UserStatusBadge';
 import { ActivityTimeline } from '../../components/admin/ActivityTimeline';
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
-import { mockAdminService } from '../../admin/services/mockAdminService';
+import { adminService } from '../../services/adminService';
 
 export function AdminUserDetailPage() {
   const { id } = useParams();
@@ -33,7 +33,7 @@ export function AdminUserDetailPage() {
   });
 
   useEffect(() => {
-    mockAdminService.getUserById(id).then((res) => {
+    adminService.getUserById(id).then((res) => {
       setData(res);
       setLoading(false);
     });
