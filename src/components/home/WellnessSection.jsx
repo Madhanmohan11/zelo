@@ -8,7 +8,8 @@ export const WellnessSection = ({
   waterTarget = 2.5,
   sleepHours = 8,
   todayMeals = [],
-  todayWorkouts = []
+  todayWorkouts = [],
+  activeGoalsCount = 0
 }) => {
   const navigate = useNavigate()
   const { isModuleEnabled } = useModulePreferences()
@@ -54,7 +55,7 @@ export const WellnessSection = ({
     {
       id: 'goals',
       title: 'Goals',
-      value: 'Track Goals',
+      value: activeGoalsCount > 0 ? `${activeGoalsCount} active` : 'Track Goals',
       subtitle: 'active goals',
       icon: Sparkles,
       iconBg: 'bg-emerald-100 text-emerald-600',

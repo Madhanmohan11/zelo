@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 // Helper for LocalStorage fallback persistence
-const getLocalData = (key, defaultVal = []) => {
+export const getLocalData = (key, defaultVal = []) => {
   try {
     const raw = localStorage.getItem(`zelo_${key}`)
     return raw ? JSON.parse(raw) : defaultVal
@@ -11,7 +11,7 @@ const getLocalData = (key, defaultVal = []) => {
   }
 }
 
-const setLocalData = (key, data) => {
+export const setLocalData = (key, data) => {
   try {
     localStorage.setItem(`zelo_${key}`, JSON.stringify(data))
   } catch (e) {
