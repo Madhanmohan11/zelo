@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getTasks, createTask, updateTask, deleteTask } from '../services/dataService'
 import { notifyDataUpdated } from '../utils/events'
+import { mapPriorityToUi, getPriorityDisplayLabel } from '../utils/priority'
 
 export const TasksPage = () => {
   const { user } = useAuth()
@@ -95,7 +96,7 @@ export const TasksPage = () => {
     setEditingTask(task)
     setTitle(task.title || '')
     setDescription(task.description || '')
-    setPriority(task.priority || 'normal')
+    setPriority(mapPriorityToUi(task.priority))
     setDueDate(task.due_date || '')
     setDueTime(task.due_time || '')
     setIsModalOpen(true)
@@ -169,13 +170,15 @@ export const TasksPage = () => {
   })
 
   const getPriorityBadge = (p) => {
-    switch (p) {
+    const uiVal = mapPriorityToUi(p)
+    switch (uiVal) {
       case 'urgent':
         return 'bg-rose-100 text-rose-800 border-rose-200'
       case 'high':
         return 'bg-amber-100 text-amber-800 border-amber-200'
       case 'low':
         return 'bg-slate-100 text-slate-700 border-slate-200'
+      case 'normal':
       default:
         return 'bg-blue-100 text-blue-800 border-blue-200'
     }
@@ -281,7 +284,7 @@ export const TasksPage = () => {
                             task.priority
                           )}`}
                         >
-                          {task.priority}
+                          {getPriorityDisplayLabel(task.priority)}
                         </span>
                       )}
                     </div>
