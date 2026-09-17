@@ -24,35 +24,38 @@ export const DashboardProvider = ({ children }) => {
   const userId = user?.id
 
   // Load persistent cache from localStorage for instant initial display
-  const getInitialCache = () => {
-    if (!userId) return INITIAL_SUMMARY_STATE
+  const getInitialCache = useCallback(() => {
+    if (!userId) return { cached: INITIAL_SUMMARY_STATE, hasData: false }
     try {
       const raw = localStorage.getItem(`zelo_dashboard_cache_${userId}`)
       if (raw) {
         const parsed = JSON.parse(raw)
-        return { ...INITIAL_SUMMARY_STATE, ...parsed }
+        const cached = { ...INITIAL_SUMMARY_STATE, ...parsed }
+        const hasData = Boolean(
+          cached.expensesSummary?.spentTotalToday ||
+          cached.tasksSummary?.totalToday ||
+          cached.calendarSummary?.todayEventsCount ||
+          cached.rememberSummary?.pendingCount ||
+          cached.mealsSummary?.todayMeals?.length ||
+          cached.workoutsSummary?.todayWorkouts?.length
+        )
+        return { cached, hasData }
       }
     } catch (e) {
       console.warn('Failed to load dashboard cache:', e)
     }
-    return INITIAL_SUMMARY_STATE
-  }
+    return { cached: INITIAL_SUMMARY_STATE, hasData: false }
+  }, [userId])
 
-  const hasCacheRef = useRef(false)
   const [summaryState, setSummaryState] = useState(() => {
-    const cached = getInitialCache()
-    hasCacheRef.current = Boolean(
-      cached.expensesSummary.spentTotalToday ||
-      cached.tasksSummary.totalToday ||
-      cached.calendarSummary.todayEventsCount ||
-      cached.rememberSummary.pendingCount ||
-      cached.mealsSummary.todayMeals.length ||
-      cached.workoutsSummary.todayWorkouts.length
-    )
+    const { cached } = getInitialCache()
     return cached
   })
 
-  const [isInitialLoading, setIsInitialLoading] = useState(!hasCacheRef.current)
+  const [isInitialLoading, setIsInitialLoading] = useState(() => {
+    const { hasData } = getInitialCache()
+    return !hasData
+  })
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Tracking active refreshes & request sequence versions for race-condition protection
@@ -503,15 +506,7 @@ export const DashboardProvider = ({ children }) => {
       return
     }
 
-    const cached = getInitialCache()
-    const hasData = Boolean(
-      cached.expensesSummary.spentTotalToday ||
-      cached.tasksSummary.totalToday ||
-      cached.calendarSummary.todayEventsCount ||
-      cached.rememberSummary.pendingCount ||
-      cached.mealsSummary.todayMeals.length ||
-      cached.workoutsSummary.todayWorkouts.length
-    )
+    const { cached, hasData } = getInitialCache()
 
     if (hasData) {
       setSummaryState(cached)
@@ -522,7 +517,7 @@ export const DashboardProvider = ({ children }) => {
 
     // Trigger background SWR refresh
     refreshAllSummaries()
-  }, [userId, refreshAllSummaries])
+  }, [userId, refreshAllSummaries, getInitialCache])
 
   // DOM Event Bridge for legacy 'zelo_data_updated' compatibility
   useEffect(() => {
