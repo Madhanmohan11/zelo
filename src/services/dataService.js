@@ -1289,7 +1289,9 @@ export const getGoals = async (userId) => {
           }
         })
       }
-      console.warn('Supabase goals table error, using local fallback:', error?.message)
+      if (error) {
+        console.warn('Supabase goals table error, using local fallback:', error?.message)
+      }
     } catch (err) {
       console.warn('Supabase getGoals failed:', err.message)
     }
@@ -1312,12 +1314,12 @@ export const createGoal = async (userId, goalData) => {
     dbStatus = 'cancelled'
   }
 
+  // Strictly valid database columns for public.goals table
   const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
     title: goalData.title,
     description: goalData.description || '',
-    category: goalData.category || 'Personal',
     target_value: 100,
     current_value: progressPct,
     unit: '%',
@@ -1341,12 +1343,12 @@ export const createGoal = async (userId, goalData) => {
   }
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase.from('goals').insert([dbPayload]).select().single()
-      if (!error && data) return localGoal
-    } catch (err) {
-      console.warn('Supabase createGoal failed:', err.message)
+    const { data, error } = await supabase.from('goals').insert([dbPayload]).select().single()
+    if (error) {
+      console.error('Supabase createGoal error:', error.message)
+      throw error
     }
+    if (data) return localGoal
   }
 
   const allGoals = getLocalData(`goals_${userId}`, [])
@@ -1360,7 +1362,6 @@ export const updateGoal = async (userId, goalId, updates) => {
 
   if (updates.title) payload.title = updates.title
   if (updates.description !== undefined) payload.description = updates.description
-  if (updates.category) payload.category = updates.category
   if (updates.start_date) payload.start_date = updates.start_date
   if (updates.target_date !== undefined) payload.target_date = updates.target_date
 
@@ -1383,18 +1384,19 @@ export const updateGoal = async (userId, goalId, updates) => {
   }
 
   if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('goals')
-        .update(payload)
-        .eq('id', goalId)
-        .eq('user_id', userId)
-        .select()
-        .single()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn('Supabase updateGoal failed:', err.message)
+    const { data, error } = await supabase
+      .from('goals')
+      .update(payload)
+      .eq('id', goalId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase updateGoal error:', error.message)
+      throw error
     }
+    if (data) return data
   }
 
   const allGoals = getLocalData(`goals_${userId}`, [])

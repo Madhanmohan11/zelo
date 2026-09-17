@@ -444,7 +444,7 @@ export const DashboardProvider = ({ children }) => {
       if (isSupabaseConfigured && supabase) {
         const { data, error } = await supabase
           .from('goals')
-          .select('id, title, category, status, target_value, current_value')
+          .select('id, title, status, target_value, current_value')
           .eq('user_id', userId)
 
         if (!error && data) {
