@@ -665,10 +665,32 @@ export const getTasks = async (userId) => {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-      if (!error && data) return data
-      console.warn('Supabase tasks table error, using local fallback:', error?.message)
+
+      if (error) {
+        console.error('Supabase getTasks error:', error.message)
+        throw error
+      }
+
+      if (data) {
+        return data.map((task) => {
+          let dueDateStr = task.due_date
+          let dueTimeStr = null
+          if (task.due_date && typeof task.due_date === 'string' && task.due_date.includes('T')) {
+            const parts = task.due_date.split('T')
+            dueDateStr = parts[0]
+            if (parts[1]) {
+              dueTimeStr = parts[1].slice(0, 5)
+            }
+          }
+          return {
+            ...task,
+            due_date: dueDateStr,
+            due_time: dueTimeStr
+          }
+        })
+      }
     } catch (err) {
-      console.warn('Supabase getTasks failed:', err.message)
+      console.warn('Supabase getTasks failed, using local fallback:', err.message)
     }
   }
 
@@ -678,66 +700,135 @@ export const getTasks = async (userId) => {
 }
 
 export const createTask = async (userId, taskData) => {
-  const newTask = {
+  let formattedDueDate = taskData.due_date || null
+  if (formattedDueDate && taskData.due_time && !formattedDueDate.includes('T')) {
+    formattedDueDate = `${formattedDueDate}T${taskData.due_time}:00`
+  }
+
+  const dbPayload = {
     id: crypto.randomUUID(),
     user_id: userId,
     title: taskData.title,
     description: taskData.description || '',
-    due_date: taskData.due_date || null,
-    due_time: taskData.due_time || null,
-    priority: taskData.priority || 'normal',
+    priority: taskData.priority || 'medium',
     status: taskData.status || 'pending',
-    completed_at: taskData.status === 'completed' ? new Date().toISOString() : null,
+    due_date: formattedDueDate,
+    category: taskData.category || 'general'
+  }
+
+  const localTask = {
+    ...dbPayload,
+    due_time: taskData.due_time || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.from('tasks').insert([newTask]).select().single()
-      if (!error && data) return data
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([dbPayload])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Supabase createTask error:', error.message)
+        throw error
+      }
+
+      if (data) {
+        let dueDateStr = data.due_date
+        let dueTimeStr = taskData.due_time || null
+        if (data.due_date && typeof data.due_date === 'string' && data.due_date.includes('T')) {
+          const parts = data.due_date.split('T')
+          dueDateStr = parts[0]
+          if (!dueTimeStr && parts[1]) {
+            dueTimeStr = parts[1].slice(0, 5)
+          }
+        }
+        return {
+          ...data,
+          due_date: dueDateStr,
+          due_time: dueTimeStr
+        }
+      }
     } catch (err) {
-      console.warn('Supabase createTask failed:', err.message)
+      console.error('Supabase createTask failed:', err.message)
+      throw err
     }
   }
 
   const allTasks = getLocalData(`tasks_${userId}`, [])
-  allTasks.push(newTask)
+  allTasks.push(localTask)
   setLocalData(`tasks_${userId}`, allTasks)
-  return newTask
+  return localTask
 }
 
 export const updateTask = async (userId, taskId, updates) => {
-  const payload = { ...updates, updated_at: new Date().toISOString() }
-  if (updates.status === 'completed' && !updates.completed_at) {
-    payload.completed_at = new Date().toISOString()
-  } else if (updates.status && updates.status !== 'completed') {
-    payload.completed_at = null
+  const dbPayload = {}
+  if (updates.title !== undefined) dbPayload.title = updates.title
+  if (updates.description !== undefined) dbPayload.description = updates.description
+  if (updates.priority !== undefined) dbPayload.priority = updates.priority
+  if (updates.status !== undefined) dbPayload.status = updates.status
+  if (updates.category !== undefined) dbPayload.category = updates.category
+
+  if (updates.due_date !== undefined || updates.due_time !== undefined) {
+    let rawDate = updates.due_date
+    let rawTime = updates.due_time
+    if (rawDate && rawTime && !rawDate.includes('T')) {
+      dbPayload.due_date = `${rawDate}T${rawTime}:00`
+    } else {
+      dbPayload.due_date = rawDate || null
+    }
   }
+
+  dbPayload.updated_at = new Date().toISOString()
 
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .update(payload)
+        .update(dbPayload)
         .eq('id', taskId)
         .eq('user_id', userId)
         .select()
         .single()
-      if (!error && data) return data
+
+      if (error) {
+        console.error('Supabase updateTask error:', error.message)
+        throw error
+      }
+
+      if (data) {
+        let dueDateStr = data.due_date
+        let dueTimeStr = updates.due_time || null
+        if (data.due_date && typeof data.due_date === 'string' && data.due_date.includes('T')) {
+          const parts = data.due_date.split('T')
+          dueDateStr = parts[0]
+          if (!dueTimeStr && parts[1]) {
+            dueTimeStr = parts[1].slice(0, 5)
+          }
+        }
+        return {
+          ...data,
+          due_date: dueDateStr,
+          due_time: dueTimeStr
+        }
+      }
     } catch (err) {
-      console.warn('Supabase updateTask failed:', err.message)
+      console.error('Supabase updateTask failed:', err.message)
+      throw err
     }
   }
 
   const allTasks = getLocalData(`tasks_${userId}`, [])
   const index = allTasks.findIndex((t) => t.id === taskId)
   if (index !== -1) {
-    allTasks[index] = { ...allTasks[index], ...payload }
+    allTasks[index] = { ...allTasks[index], ...updates, ...dbPayload }
     setLocalData(`tasks_${userId}`, allTasks)
     return allTasks[index]
   }
-  return payload
+  return { ...updates, ...dbPayload }
 }
 
 export const deleteTask = async (userId, taskId) => {
@@ -748,9 +839,15 @@ export const deleteTask = async (userId, taskId) => {
         .delete()
         .eq('id', taskId)
         .eq('user_id', userId)
-      if (!error) return true
+
+      if (error) {
+        console.error('Supabase deleteTask error:', error.message)
+        throw error
+      }
+      return true
     } catch (err) {
-      console.warn('Supabase deleteTask failed:', err.message)
+      console.error('Supabase deleteTask failed:', err.message)
+      throw err
     }
   }
 
@@ -759,6 +856,7 @@ export const deleteTask = async (userId, taskId) => {
   setLocalData(`tasks_${userId}`, allTasks)
   return true
 }
+
 
 // -----------------------------------------------------------------------------
 // PERSONAL EVENTS SERVICE
