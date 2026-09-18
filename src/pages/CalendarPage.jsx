@@ -1212,8 +1212,8 @@ export const CalendarPage = () => {
 
       {/* ADD EVENT MODAL */}
       {showAddEventModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <Card className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <Card className="w-full max-w-md bg-white border-0 sm:border border-slate-200 rounded-none sm:rounded-3xl p-5 space-y-4 shadow-xl animate-in zoom-in-95 h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] flex flex-col overflow-y-auto pb-16 sm:pb-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-black text-slate-900">Create Personal Event</h3>
               <button
@@ -1335,8 +1335,8 @@ export const CalendarPage = () => {
 
       {/* CALENDAR SETTINGS MODAL */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <Card className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <Card className="w-full max-w-md bg-white border-0 sm:border border-slate-200 rounded-none sm:rounded-3xl p-5 space-y-4 shadow-xl animate-in zoom-in-95 h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] flex flex-col overflow-y-auto pb-16 sm:pb-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Settings className="w-4 h-4 text-emerald-600" />
