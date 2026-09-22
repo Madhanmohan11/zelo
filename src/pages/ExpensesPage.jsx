@@ -22,6 +22,7 @@ import { formatINR } from '../utils/formatters'
 import { ExpenseTabs } from '../components/expenses/ExpenseTabs'
 import { ExpenseSummary } from '../components/expenses/ExpenseSummary'
 import { ExpenseFilters } from '../components/expenses/ExpenseFilters'
+import { FilterBottomSheet } from '../components/expenses/FilterBottomSheet'
 import { ExpenseList } from '../components/expenses/ExpenseList'
 import { ExpenseModal } from '../components/expenses/ExpenseModal'
 import { AccountList } from '../components/expenses/AccountList'
@@ -60,9 +61,14 @@ export const ExpensesPage = () => {
 
   // Expense filters & search
   const [searchQuery, setSearchQuery] = useState('')
-  const [timeFilter, setTimeFilter] = useState('all') // 'all', 'today', 'week', 'month'
+  const [timeFilter, setTimeFilter] = useState('month') // Default: 'month'. Options: 'today', 'month', 'year', 'custom', 'all'
+  const [customFromDate, setCustomFromDate] = useState('')
+  const [customToDate, setCustomToDate] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [accountFilter, setAccountFilter] = useState('all')
+
+  // Mobile filter sheet state
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
   // Analytics view mode
   const [analyticsMode, setAnalyticsMode] = useState('monthly') // 'monthly', 'yearly'
@@ -350,41 +356,65 @@ export const ExpensesPage = () => {
   }
 
   // -----------------------------------------------------------------------------
-  // METRICS & FILTER CALCULATIONS
+  // METRICS & REAL DATE CALCULATIONS
   // -----------------------------------------------------------------------------
   const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth()
 
-  const startOfWeek = new Date(now)
-  startOfWeek.setDate(now.getDate() - now.getDay())
-  const startOfWeekStr = startOfWeek.toISOString().split('T')[0]
+  const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-  const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const startOfMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`
+  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+  const endOfMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')}`
 
-  const todayExpenses = expenses.filter((e) => (e.spent_at || '').split('T')[0] === todayStr)
+  const startOfYearStr = `${currentYear}-01-01`
+  const endOfYearStr = `${currentYear}-12-31`
+
+  // Last Month dates for % comparison
+  const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear
+  const lastMonthVal = currentMonth === 0 ? 11 : currentMonth - 1
+  const startOfLastMonthStr = `${lastMonthYear}-${String(lastMonthVal + 1).padStart(2, '0')}-01`
+  const lastDayOfLastMonth = new Date(lastMonthYear, lastMonthVal + 1, 0).getDate()
+  const endOfLastMonthStr = `${lastMonthYear}-${String(lastMonthVal + 1).padStart(2, '0')}-${String(lastDayOfLastMonth).padStart(2, '0')}`
+
+  // Metric sums using REAL data from existing expenses service
+  const todayExpenses = expenses.filter((e) => (e.spent_at || e.created_at || '').split('T')[0] === todayStr)
   const todayTotal = todayExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
-  const todayCount = todayExpenses.length
 
-  const weekExpenses = expenses.filter((e) => (e.spent_at || '').split('T')[0] >= startOfWeekStr)
-  const weekTotal = weekExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
-  const weekCount = weekExpenses.length
-
-  const monthExpenses = expenses.filter((e) => (e.spent_at || '').split('T')[0] >= startOfMonthStr)
+  const monthExpenses = expenses.filter((e) => {
+    const d = (e.spent_at || e.created_at || '').split('T')[0]
+    return d >= startOfMonthStr && d <= endOfMonthStr
+  })
   const monthTotal = monthExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
-  const monthCount = monthExpenses.length
 
-  const totalSpending = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
-  const totalCount = expenses.length
+  const yearExpenses = expenses.filter((e) => {
+    const d = (e.spent_at || e.created_at || '').split('T')[0]
+    return d >= startOfYearStr && d <= endOfYearStr
+  })
+  const yearTotal = yearExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
 
-  // Filtered expense list
+  const lastMonthExpenses = expenses.filter((e) => {
+    const d = (e.spent_at || e.created_at || '').split('T')[0]
+    return d >= startOfLastMonthStr && d <= endOfLastMonthStr
+  })
+  const lastMonthTotal = lastMonthExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+
+  // -----------------------------------------------------------------------------
+  // FILTERED EXPENSES SELECTION
+  // -----------------------------------------------------------------------------
   const filteredExpenses = expenses.filter((e) => {
-    const expDate = (e.spent_at || '').split('T')[0]
+    const expDate = (e.spent_at || e.created_at || '').split('T')[0]
 
     if (timeFilter === 'today' && expDate !== todayStr) return false
-    if (timeFilter === 'week' && expDate < startOfWeekStr) return false
-    if (timeFilter === 'month' && expDate < startOfMonthStr) return false
+    if (timeFilter === 'month' && (expDate < startOfMonthStr || expDate > endOfMonthStr)) return false
+    if (timeFilter === 'year' && (expDate < startOfYearStr || expDate > endOfYearStr)) return false
+    if (timeFilter === 'custom') {
+      if (customFromDate && expDate < customFromDate) return false
+      if (customToDate && expDate > customToDate) return false
+    }
 
-    if (categoryFilter !== 'all' && e.category !== categoryFilter) return false
+    if (categoryFilter !== 'all' && (e.category || '').toLowerCase() !== categoryFilter.toLowerCase()) return false
     if (accountFilter !== 'all' && e.account_id !== accountFilter) return false
 
     if (searchQuery.trim()) {
@@ -397,6 +427,15 @@ export const ExpensesPage = () => {
 
     return true
   })
+
+  const handleClearFilters = () => {
+    setTimeFilter('month')
+    setCustomFromDate('')
+    setCustomToDate('')
+    setCategoryFilter('all')
+    setAccountFilter('all')
+    setSearchQuery('')
+  }
 
   // Account object lookup for delete modal
   const accountMap = new Map(accounts.map((a) => [a.id, a]))
@@ -415,12 +454,12 @@ export const ExpensesPage = () => {
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">
-              {activeTab === 'savings' ? 'Savings' : 'Expense Manager'}
+              {activeTab === 'savings' ? 'Savings' : 'Expenses'}
             </h1>
             <p className="text-xs font-semibold text-slate-500 mt-0.5">
               {activeTab === 'savings'
                 ? 'Track your income, spending and grow your savings'
-                : 'Track daily spending, categories, and monthly totals'}
+                : 'Track your spending, stay in control'}
             </p>
           </div>
         </div>
@@ -447,39 +486,38 @@ export const ExpensesPage = () => {
           EXPENSES TAB VIEW
          ----------------------------------------------------------------------- */}
       {activeTab === 'expenses' && (
-        <div className="space-y-6">
-          {/* SUMMARY CARDS */}
+        <div className="space-y-5">
+          {/* 1. BANKING SPENDING SUMMARY HEADER */}
           <ExpenseSummary
             todayTotal={todayTotal}
-            todayCount={todayCount}
-            weekTotal={weekTotal}
-            weekCount={weekCount}
             monthTotal={monthTotal}
-            monthCount={monthCount}
-            totalSpending={totalSpending}
-            totalCount={totalCount}
+            yearTotal={yearTotal}
+            lastMonthTotal={lastMonthTotal}
+            currentMonthName={now.toLocaleDateString([], { month: 'long', year: 'numeric' })}
           />
 
-          {/* FILTERS BAR */}
+          {/* 2. FILTERS BAR */}
           <div id="expense-filters-section">
             <ExpenseFilters
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               timeFilter={timeFilter}
               onTimeFilterChange={setTimeFilter}
+              customFromDate={customFromDate}
+              onCustomFromDateChange={setCustomFromDate}
+              customToDate={customToDate}
+              onCustomToDateChange={setCustomToDate}
               categoryFilter={categoryFilter}
               onCategoryFilterChange={setCategoryFilter}
               accountFilter={accountFilter}
               onAccountFilterChange={setAccountFilter}
               accounts={accounts}
-              onToggleFilters={() => {
-                const searchEl = document.querySelector('input[placeholder*="Search"]')
-                if (searchEl) searchEl.focus()
-              }}
+              onOpenFilterSheet={() => setIsFilterSheetOpen(true)}
+              onClearFilters={handleClearFilters}
             />
           </div>
 
-          {/* EXPENSES LIST */}
+          {/* 3. COMPACT DATE-GROUPED TRANSACTION LIST */}
           <ExpenseList
             expenses={filteredExpenses}
             accounts={accounts}
@@ -487,9 +525,10 @@ export const ExpensesPage = () => {
             onEdit={handleOpenEditExpense}
             onDelete={handleOpenDeleteExpense}
             onAddExpenseClick={handleOpenAddExpense}
+            onClearFilters={handleClearFilters}
           />
 
-          {/* SPENDING ANALYTICS SECTION */}
+          {/* 4. SPENDING ANALYTICS SECTION */}
           <div id="expense-analytics-section" className="pt-6 border-t border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
@@ -552,6 +591,27 @@ export const ExpensesPage = () => {
       {/* -----------------------------------------------------------------------
           MODALS & DIALOGS
          ----------------------------------------------------------------------- */}
+      {/* FILTER BOTTOM SHEET (MOBILE) */}
+      <FilterBottomSheet
+        isOpen={isFilterSheetOpen}
+        onClose={() => setIsFilterSheetOpen(false)}
+        timeFilter={timeFilter}
+        setTimeFilter={setTimeFilter}
+        customFromDate={customFromDate}
+        setCustomFromDate={setCustomFromDate}
+        customToDate={customToDate}
+        setCustomToDate={setCustomToDate}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        accountFilter={accountFilter}
+        setAccountFilter={setAccountFilter}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        accounts={accounts}
+        onApply={() => setIsFilterSheetOpen(false)}
+        onReset={handleClearFilters}
+      />
+
       {/* EXPENSE MODAL */}
       <ExpenseModal
         isOpen={isExpenseModalOpen}
@@ -646,16 +706,13 @@ export const ExpensesPage = () => {
         isSubmitting={isSubmitting}
       />
 
-      {/* STICKY BOTTOM ACTION BAR (DEDICATED FOR EXPENSE & SAVINGS PAGE) */}
+      {/* STICKY BOTTOM ACTION BAR */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200/90 py-2 px-3 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2 px-2">
           {/* 1. FILTER BUTTON */}
           <button
             type="button"
-            onClick={() => {
-              const filterEl = document.getElementById(activeTab === 'savings' ? 'recent-activity-section' : 'expense-filters-section')
-              if (filterEl) filterEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            }}
+            onClick={() => setIsFilterSheetOpen(true)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-2xs border border-slate-200/90 transition-all active:scale-95 cursor-pointer"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-slate-700" />
@@ -666,7 +723,7 @@ export const ExpensesPage = () => {
           <button
             type="button"
             onClick={activeTab === 'savings' ? () => handleOpenAddMoney() : handleOpenAddExpense}
-            className="flex-[1.4] flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs shadow-md shadow-emerald-500/20 transition-all active:scale-95 cursor-pointer"
+            className="flex-[1.4] flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4 text-white stroke-[2.5]" />
             <span>{activeTab === 'savings' ? 'Add Money' : 'Add Expense'}</span>
@@ -689,4 +746,3 @@ export const ExpensesPage = () => {
     </div>
   )
 }
-
