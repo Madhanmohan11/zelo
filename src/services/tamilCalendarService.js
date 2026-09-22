@@ -9,13 +9,13 @@ export const TAMIL_MONTHS = [
   { id: 'chithirai', ta: 'சித்திரை', en: 'Chithirai', startMonth: 3, startDate: 14 },
   { id: 'vaikasi', ta: 'வைகாசி', en: 'Vaikasi', startMonth: 4, startDate: 15 },
   { id: 'aani', ta: 'ஆனி', en: 'Aani', startMonth: 5, startDate: 15 },
-  { id: 'aadi', ta: 'ஆடி', en: 'Aadi', startMonth: 6, startDate: 16 },
-  { id: 'avani', ta: 'ஆவணி', en: 'Avani', startMonth: 7, startDate: 17 },
-  { id: 'purattasi', ta: 'புரட்டாசி', en: 'Purattasi', startMonth: 8, startDate: 17 },
-  { id: 'aippasi', ta: 'ஐப்பசி', en: 'Aippasi', startMonth: 9, startDate: 17 },
-  { id: 'karthigai', ta: 'கார்த்திகை', en: 'Karthigai', startMonth: 10, startDate: 16 },
+  { id: 'aadi', ta: 'ஆடி', en: 'Aadi', startMonth: 6, startDate: 17 },
+  { id: 'avani', ta: 'ஆவணி', en: 'Avani', startMonth: 7, startDate: 18 },
+  { id: 'purattasi', ta: 'புரட்டாசி', en: 'Purattasi', startMonth: 8, startDate: 18 },
+  { id: 'aippasi', ta: 'ஐப்பசி', en: 'Aippasi', startMonth: 9, startDate: 18 },
+  { id: 'karthigai', ta: 'கார்த்திகை', en: 'Karthigai', startMonth: 10, startDate: 17 },
   { id: 'margazhi', ta: 'மார்கழி', en: 'Margazhi', startMonth: 11, startDate: 16 },
-  { id: 'thai', ta: 'தை', en: 'Thai', startMonth: 0, startDate: 14 },
+  { id: 'thai', ta: 'தை', en: 'Thai', startMonth: 0, startDate: 15 },
   { id: 'masi', ta: 'மாசி', en: 'Masi', startMonth: 1, startDate: 13 },
   { id: 'panguni', ta: 'பங்குனி', en: 'Panguni', startMonth: 2, startDate: 15 }
 ]
@@ -188,28 +188,28 @@ export const getTamilDateDetails = (dateInput, lang = 'both') => {
       tamilDayNum = day - 15
     }
   } else if (month === 7) { // Aug
-    if (day < 17) {
+    if (day < 18) {
       tamilMonthObj = TAMIL_MONTHS[3] // Aadi
-      tamilDayNum = day + 16
-    } else {
-      tamilMonthObj = TAMIL_MONTHS[4] // Avani
-      tamilDayNum = day - 16
-    }
-  } else if (month === 8) { // Sep
-    if (day < 17) {
-      tamilMonthObj = TAMIL_MONTHS[4] // Avani
       tamilDayNum = day + 15
     } else {
+      tamilMonthObj = TAMIL_MONTHS[4] // Avani
+      tamilDayNum = day - 17
+    }
+  } else if (month === 8) { // Sep
+    if (day < 18) {
+      tamilMonthObj = TAMIL_MONTHS[4] // Avani
+      tamilDayNum = day + 14 // Sep 17 -> Avani 31
+    } else {
       tamilMonthObj = TAMIL_MONTHS[5] // Purattasi
-      tamilDayNum = day - 16
+      tamilDayNum = day - 17 // Sep 18 -> Purattasi 1
     }
   } else if (month === 9) { // Oct
-    if (day < 17) {
+    if (day < 18) {
       tamilMonthObj = TAMIL_MONTHS[5] // Purattasi
-      tamilDayNum = day + 14
+      tamilDayNum = day + 13 // Oct 1 -> Purattasi 14, Oct 17 -> Purattasi 30
     } else {
       tamilMonthObj = TAMIL_MONTHS[6] // Aippasi
-      tamilDayNum = day - 16
+      tamilDayNum = day - 17 // Oct 18 -> Aippasi 1
     }
   } else if (month === 10) { // Nov
     if (day < 16) {

@@ -51,7 +51,8 @@ const YEAR_DATASETS = {
     { date: '2026-09-04', name: 'Krishna Jayanthi / Gokulashtami', taName: 'கிருஷ்ண ஜெயந்தி', category: HOLIDAY_CATEGORIES.FESTIVAL, isPublicHoliday: true, state: 'Tamil Nadu', desc: 'Birth celebration of Lord Krishna.' },
     { date: '2026-09-05', name: 'Teachers\' Day (India)', taName: 'ஆசிரியர் தினம்', category: HOLIDAY_CATEGORIES.IMPORTANT, isPublicHoliday: false, state: 'National', desc: 'Honoring teachers on Dr. Sarvepalli Radhakrishnan\'s birthday.' },
     { date: '2026-09-14', name: 'Vinayagar Chathurthi', taName: 'விநாயகர் சதுர்த்தி', category: HOLIDAY_CATEGORIES.GOVT, isPublicHoliday: true, state: 'Tamil Nadu', desc: 'Festival celebrating the arrival of Lord Ganesha.' },
-    { date: '2026-09-17', name: 'World Patient Safety Day / Purattasi 1', taName: 'உலக நோயாளி பாதுகாப்பு நாள் / புரட்டாசி பிறப்பு', category: HOLIDAY_CATEGORIES.IMPORTANT, isPublicHoliday: false, state: 'Global & Tamil Nadu', desc: 'Promotes patient safety & beginning of Purattasi month.' },
+    { date: '2026-09-17', name: 'World Patient Safety Day', taName: 'உலக நோயாளி பாதுகாப்பு நாள்', category: HOLIDAY_CATEGORIES.IMPORTANT, isPublicHoliday: false, state: 'Global', desc: 'Promotes patient safety awareness worldwide.' },
+    { date: '2026-09-18', name: 'Purattasi 1 (Purattasi Pirappu)', taName: 'புரட்டாசி 1 (புரட்டாசி பிறப்பு)', category: HOLIDAY_CATEGORIES.FESTIVAL, isPublicHoliday: false, state: 'Tamil Nadu', desc: 'Beginning of the holy Purattasi month in Tamil solar calendar.' },
     { date: '2026-09-26', name: 'Milad-un-Nabi', taName: 'மிலாடி நபி', category: HOLIDAY_CATEGORIES.GOVT, isPublicHoliday: true, state: 'Tamil Nadu & National', desc: 'Birth anniversary of Prophet Muhammad.' },
 
     // October
