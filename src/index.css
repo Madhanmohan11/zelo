@@ -149,11 +149,11 @@
 
 /* Safe area inset support */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .pt-safe {
-  padding-top: env(safe-area-inset-top, 16px);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Mobile input tweaks */

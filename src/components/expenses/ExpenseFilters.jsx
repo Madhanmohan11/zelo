@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, SlidersHorizontal, Calendar, X, Filter } from 'lucide-react'
+import { Search, SlidersHorizontal, Calendar, X, Filter, Plus } from 'lucide-react'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 
@@ -18,7 +18,8 @@ export const ExpenseFilters = ({
   onAccountFilterChange,
   accounts = [],
   onOpenFilterSheet,
-  onClearFilters
+  onClearFilters,
+  onAddExpenseClick
 }) => {
   const accountOptions = [
     { value: 'all', label: 'All Accounts' },
@@ -48,6 +49,23 @@ export const ExpenseFilters = ({
 
   return (
     <div className="space-y-2.5">
+      {/* 0. ADD EXPENSE HEADER ROW */}
+      {onAddExpenseClick && (
+        <div className="flex items-center justify-between gap-2 pt-0.5 pb-0.5">
+          <span className="text-xs font-extrabold text-slate-700 tracking-tight">
+            Transaction History
+          </span>
+          <button
+            type="button"
+            onClick={onAddExpenseClick}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Add Expense</span>
+          </button>
+        </div>
+      )}
+
       {/* 1. SEARCH BAR */}
       <div>
         <Input
