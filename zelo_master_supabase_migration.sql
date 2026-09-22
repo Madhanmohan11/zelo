@@ -701,15 +701,14 @@ CREATE OR REPLACE FUNCTION public.handle_account_insert_or_update()
 RETURNS TRIGGER AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    -- Force current_balance to equal opening_balance on creation
-    NEW.current_balance := COALESCE(NEW.opening_balance, 0.00);
+    -- Force current_balance to equal opening_balance on creation if not explicitly provided
+    IF NEW.current_balance IS NULL OR NEW.current_balance = 0.00 THEN
+      NEW.current_balance := COALESCE(NEW.opening_balance, 0.00);
+    END IF;
   ELSIF TG_OP = 'UPDATE' THEN
-    -- If opening_balance was updated, adjust current_balance by difference from OLD.current_balance
+    -- If opening_balance was updated, adjust current_balance by the difference
     IF OLD.opening_balance IS DISTINCT FROM NEW.opening_balance THEN
       NEW.current_balance := OLD.current_balance + (NEW.opening_balance - OLD.opening_balance);
-    ELSE
-      -- Protect current_balance from being overwritten by frontend payload updates
-      NEW.current_balance := OLD.current_balance;
     END IF;
   END IF;
   RETURN NEW;

@@ -265,7 +265,9 @@ export const recalculateAllAccountBalances = async (userId, accounts) => {
     moneyTx = getLocalData(`money_transactions_${userId}`, [])
   }
 
-  return accounts.map((acc) => {
+  const syncPromises = []
+
+  const updatedAccounts = accounts.map((acc) => {
     const opening = parseFloat(acc.opening_balance) || 0
 
     // Deduct expenses associated with this account
@@ -288,13 +290,32 @@ export const recalculateAllAccountBalances = async (userId, accounts) => {
       .filter((tx) => tx.to_account_id === acc.id && tx.transaction_type === 'transfer')
       .reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0)
 
-    const calculatedBalance = opening + totalIncome + totalTransfersIn - totalSpent - totalTransfersOut
+    const calculatedBalance = Math.max(0, opening + totalIncome + totalTransfersIn - totalSpent - totalTransfersOut)
+
+    // Sync out-of-sync stored DB balance to Supabase if different
+    if (isSupabaseConfigured && supabase && parseFloat(acc.current_balance) !== calculatedBalance) {
+      syncPromises.push(
+        supabase
+          .from('accounts')
+          .update({ current_balance: calculatedBalance, updated_at: new Date().toISOString() })
+          .eq('id', acc.id)
+          .eq('user_id', userId)
+      )
+    }
 
     return {
       ...acc,
-      current_balance: Math.max(0, calculatedBalance)
+      current_balance: calculatedBalance
     }
   })
+
+  if (syncPromises.length > 0) {
+    Promise.all(syncPromises).catch((err) =>
+      console.warn('Error auto-syncing account balances to Supabase:', err)
+    )
+  }
+
+  return updatedAccounts
 }
 
 // -----------------------------------------------------------------------------
