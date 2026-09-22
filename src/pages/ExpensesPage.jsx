@@ -514,6 +514,7 @@ export const ExpensesPage = () => {
               accounts={accounts}
               onOpenFilterSheet={() => setIsFilterSheetOpen(true)}
               onClearFilters={handleClearFilters}
+              onAddExpenseClick={handleOpenAddExpense}
             />
           </div>
 

@@ -98,7 +98,7 @@ export const AppLayout = () => {
       </header>
 
       {/* CENTERED MAIN CONTENT CONTAINER */}
-      <main className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-28 sm:pb-32 flex-1">
+      <main className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-20 sm:pb-24 flex-1">
         <Outlet context={{ openQuickAdd, openAIPanel }} />
       </main>
 
@@ -107,7 +107,7 @@ export const AppLayout = () => {
         aria-label="Main Navigation"
         className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 z-40 pb-safe shadow-lg"
       >
-        <div className="max-w-md mx-auto px-4 py-2 flex items-center justify-between relative">
+        <div className="max-w-md mx-auto px-4 pt-1.5 pb-1 flex items-center justify-between relative">
           {/* Left Navigation Items (Home, Money) */}
           <div className="flex items-center justify-around flex-1">
             {navItemsLeft.map((item) => {
@@ -121,21 +121,21 @@ export const AppLayout = () => {
                   to={item.path}
                   aria-label={item.ariaLabel}
                   title={item.title}
-                  className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
+                  className={`flex flex-col items-center justify-center py-0.5 px-3 rounded-xl transition-all active:scale-95 ${
                     isActive
                       ? 'text-emerald-600 font-extrabold'
                       : 'text-slate-400 hover:text-slate-600 font-medium'
                   }`}
                 >
-                  <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
-                  <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
+                  <Icon className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                  <span className="text-[10px] sm:text-[11px] tracking-tight mt-0.5 font-semibold">{item.label}</span>
                 </NavLink>
               )
             })}
           </div>
 
           {/* CENTER PROMINENT ZELO Z ORBIT BUTTON */}
-          <div className="px-2 shrink-0 flex flex-col items-center -translate-y-4">
+          <div className="px-2 shrink-0 flex flex-col items-center -translate-y-3">
             <ZeloOrbitButton
               onClick={() => openAIPanel()}
               isActive={isAIPanelOpen}
@@ -156,14 +156,14 @@ export const AppLayout = () => {
                   to={item.path}
                   aria-label={item.ariaLabel}
                   title={item.title}
-                  className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
+                  className={`flex flex-col items-center justify-center py-0.5 px-3 rounded-xl transition-all active:scale-95 ${
                     isActive
                       ? 'text-emerald-600 font-extrabold'
                       : 'text-slate-400 hover:text-slate-600 font-medium'
                   }`}
                 >
-                  <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
-                  <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
+                  <Icon className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                  <span className="text-[10px] sm:text-[11px] tracking-tight mt-0.5 font-semibold">{item.label}</span>
                 </NavLink>
               )
             })}
