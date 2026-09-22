@@ -444,12 +444,16 @@ export const createExpense = async (userId, expenseData) => {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.from('expenses').insert([newExpense]).select().single()
-      if (!error && data) {
+      if (error) {
+        throw new Error(error.message || 'Failed to create expense in database')
+      }
+      if (data) {
         notifyDataUpdated('expenses', 'created', data)
         return data
       }
     } catch (err) {
       console.warn('Supabase createExpense failed:', err.message)
+      throw err
     }
   }
 

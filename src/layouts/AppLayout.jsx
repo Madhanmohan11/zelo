@@ -7,16 +7,20 @@ import {
   LayoutGrid,
   Plus,
   ArrowLeft,
-  MoreVertical
+  MoreVertical,
+  Sparkles
 } from 'lucide-react'
 import zeloLogo from '../assets/Logo.png'
 import { useAuth } from '../context/AuthContext'
+import { useAI } from '../context/AIContext'
 import { QuickAddModal } from '../components/QuickAddModal'
+import { ZeloAIPanel } from '../components/ai/ZeloAIPanel'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { notifyDataUpdated } from '../utils/events'
 
 export const AppLayout = () => {
   const { profile } = useAuth()
+  const { openAIPanel, isAIPanelOpen } = useAI()
   const location = useLocation()
   const navigate = useNavigate()
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
@@ -95,7 +99,7 @@ export const AppLayout = () => {
 
       {/* CENTERED MAIN CONTENT CONTAINER */}
       <main className="w-full max-w-2xl mx-auto p-4 sm:p-6 pb-28 sm:pb-32 flex-1">
-        <Outlet context={{ openQuickAdd }} />
+        <Outlet context={{ openQuickAdd, openAIPanel }} />
       </main>
 
       {/* MOBILE BOTTOM NAVIGATION BAR — HIDE ON EXPENSE MANAGER PAGE */}
@@ -131,17 +135,17 @@ export const AppLayout = () => {
               })}
             </div>
 
-            {/* CENTER PROMINENT + QUICK ADD BUTTON */}
+            {/* CENTER PROMINENT ZELO AI BUTTON */}
             <div className="px-3 shrink-0 flex flex-col items-center">
               <button
-                onClick={toggleQuickAdd}
-                aria-label="Add Entry"
-                title="Add Entry"
+                onClick={() => openAIPanel()}
+                aria-label="ZELO AI Assistant"
+                title="ZELO AI Assistant"
                 className={`w-13 h-13 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/35 flex items-center justify-center transition-all transform active:scale-95 -translate-y-4 border-2 border-white cursor-pointer ${
-                  isQuickAddOpen ? 'rotate-45 bg-slate-800 shadow-slate-900/20' : ''
+                  isAIPanelOpen ? 'scale-105 bg-slate-900 ring-4 ring-emerald-400/40' : ''
                 }`}
               >
-                <Plus className="w-7 h-7 stroke-[2.5] transition-transform" />
+                <Sparkles className="w-6 h-6 stroke-[2.5] transition-transform animate-pulse" />
               </button>
             </div>
 
@@ -181,6 +185,9 @@ export const AppLayout = () => {
           notifyDataUpdated(mod || 'all', 'created')
         }}
       />
+
+      {/* GLOBAL ZELO AI ASSISTANT PANEL */}
+      <ZeloAIPanel />
     </div>
   )
 }
