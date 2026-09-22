@@ -207,7 +207,7 @@ export const ExpenseList = ({
             </div>
 
             {/* COMPACT TRANSACTION ROWS */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100/90 overflow-hidden shadow-2xs">
+            <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100/90 shadow-2xs">
               {group.items.map((exp) => {
                 const CategoryIcon = getCategoryIcon(exp.category, exp.description)
                 const categoryStyle = getCategoryStyle(exp.category, exp.description)
@@ -222,7 +222,7 @@ export const ExpenseList = ({
                 return (
                   <div
                     key={exp.id}
-                    className="flex items-center justify-between p-3 sm:p-3.5 hover:bg-slate-50/80 transition-colors relative group"
+                    className="flex items-center justify-between p-3 sm:p-3.5 hover:bg-slate-50/80 transition-colors relative group first:rounded-t-2xl last:rounded-b-2xl"
                   >
                     {/* LEFT SIDE: ICON + TITLE + METADATA */}
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -272,7 +272,7 @@ export const ExpenseList = ({
 
                         {/* POPUP DROPDOWN MENU */}
                         {isMenuOpen && (
-                          <div className="absolute right-0 top-8 z-30 w-36 bg-white rounded-2xl shadow-lg border border-slate-200 py-1.5 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="absolute right-0 top-full mt-1 z-50 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150">
                             <button
                               type="button"
                               onClick={() => {

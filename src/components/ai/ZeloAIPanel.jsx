@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Sparkles, X, Send, Trash2, Bot, ArrowDown, Loader2 } from 'lucide-react'
+import { X, Send, Trash2, Bot, ArrowDown, Loader2 } from 'lucide-react'
+import zeloOrbitSvg from '../../assets/zelo-orbit.svg'
 import { useAI } from '../../context/AIContext'
 import { AIMessage } from './AIMessage'
 import { AIQuickActions } from './AIQuickActions'
@@ -58,8 +59,8 @@ export const ZeloAIPanel = () => {
         {/* PANEL HEADER */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white shrink-0 shadow-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 border border-emerald-400/40 shrink-0">
-              <Sparkles className="w-5 h-5 stroke-[2.5]" />
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 border border-emerald-400/40 shrink-0 p-1.5">
+              <img src={zeloOrbitSvg} alt="Z-AI" className="w-full h-full object-contain" />
             </div>
             <div>
               <h3 className="text-base font-black text-white tracking-tight flex items-center gap-1.5">
@@ -102,8 +103,8 @@ export const ZeloAIPanel = () => {
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
           {messages.length === 0 ? (
             <div className="py-12 px-4 text-center space-y-3 max-w-sm mx-auto">
-              <div className="w-14 h-14 rounded-3xl bg-emerald-100 border-2 border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-                <Sparkles className="w-7 h-7 stroke-[2.5]" />
+              <div className="w-14 h-14 rounded-3xl bg-emerald-100 border-2 border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-inner p-2.5">
+                <img src={zeloOrbitSvg} alt="Z-AI" className="w-full h-full object-contain" />
               </div>
               <h4 className="text-base font-black text-slate-900 tracking-tight">How can ZELO AI help you today?</h4>
               <p className="text-xs font-semibold text-slate-500 leading-relaxed">

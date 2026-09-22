@@ -48,31 +48,15 @@ export const ExpenseFilters = ({
 
   return (
     <div className="space-y-2.5">
-      {/* 1. SEARCH BAR WITH FILTER BUTTON */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
-          <Input
-            icon={Search}
-            placeholder="Search expenses..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="rounded-2xl bg-white border-slate-200/80 shadow-2xs text-xs sm:text-sm placeholder:text-slate-400 focus:border-emerald-500"
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={onOpenFilterSheet}
-          title="Filter expenses"
-          aria-label="Filter expenses"
-          className={`p-3 rounded-2xl border shadow-2xs transition-all active:scale-95 shrink-0 flex items-center justify-center cursor-pointer ${
-            hasActiveFilters
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold'
-              : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50'
-          }`}
-        >
-          <SlidersHorizontal className="w-4.5 h-4.5" />
-        </button>
+      {/* 1. SEARCH BAR */}
+      <div>
+        <Input
+          icon={Search}
+          placeholder="Search expenses..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="rounded-2xl bg-white border-slate-200/80 shadow-2xs text-xs sm:text-sm placeholder:text-slate-400 focus:border-emerald-500"
+        />
       </div>
 
       {/* 2. TIME PERIOD PILLS: [ Today ] [ Month ] [ Year ] [ Custom ] */}
