@@ -7,9 +7,9 @@ import {
   LayoutGrid,
   Plus,
   ArrowLeft,
-  MoreVertical,
-  Sparkles
+  MoreVertical
 } from 'lucide-react'
+import { ZeloOrbitButton } from '../components/navigation/ZeloOrbitButton'
 import zeloLogo from '../assets/Logo.png'
 import { useAuth } from '../context/AuthContext'
 import { useAI } from '../context/AIContext'
@@ -102,79 +102,74 @@ export const AppLayout = () => {
         <Outlet context={{ openQuickAdd, openAIPanel }} />
       </main>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR — HIDE ON EXPENSE MANAGER PAGE */}
-      {!isExpensesPage && (
-        <nav
-          aria-label="Main Navigation"
-          className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 z-40 pb-safe shadow-lg"
-        >
-          <div className="max-w-md mx-auto px-4 py-2 flex items-center justify-between relative">
-            {/* Left Navigation Items (Home, Money) */}
-            <div className="flex items-center justify-around flex-1">
-              {navItemsLeft.map((item) => {
-                const Icon = item.icon
-                const isActive = item.path === '/today'
-                  ? (location.pathname === '/today' || location.pathname === '/')
-                  : location.pathname.startsWith(item.path)
-                return (
-                  <NavLink
-                    key={item.label}
-                    to={item.path}
-                    aria-label={item.ariaLabel}
-                    title={item.title}
-                    className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
-                      isActive
-                        ? 'text-emerald-600 font-extrabold'
-                        : 'text-slate-400 hover:text-slate-600 font-medium'
-                    }`}
-                  >
-                    <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
-                    <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
-                  </NavLink>
-                )
-              })}
-            </div>
-
-            {/* CENTER PROMINENT ZELO AI BUTTON */}
-            <div className="px-3 shrink-0 flex flex-col items-center">
-              <button
-                onClick={() => openAIPanel()}
-                aria-label="ZELO AI Assistant"
-                title="ZELO AI Assistant"
-                className={`w-13 h-13 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/35 flex items-center justify-center transition-all transform active:scale-95 -translate-y-4 border-2 border-white cursor-pointer ${
-                  isAIPanelOpen ? 'scale-105 bg-slate-900 ring-4 ring-emerald-400/40' : ''
-                }`}
-              >
-                <Sparkles className="w-6 h-6 stroke-[2.5] transition-transform animate-pulse" />
-              </button>
-            </div>
-
-            {/* Right Navigation Items (Tasks, More) */}
-            <div className="flex items-center justify-around flex-1">
-              {navItemsRight.map((item) => {
-                const Icon = item.icon
-                const isActive = location.pathname.startsWith(item.path)
-                return (
-                  <NavLink
-                    key={item.label}
-                    to={item.path}
-                    aria-label={item.ariaLabel}
-                    title={item.title}
-                    className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
-                      isActive
-                        ? 'text-emerald-600 font-extrabold'
-                        : 'text-slate-400 hover:text-slate-600 font-medium'
-                    }`}
-                  >
-                    <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
-                    <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
-                  </NavLink>
-                )
-              })}
-            </div>
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <nav
+        aria-label="Main Navigation"
+        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 z-40 pb-safe shadow-lg"
+      >
+        <div className="max-w-md mx-auto px-4 py-2 flex items-center justify-between relative">
+          {/* Left Navigation Items (Home, Money) */}
+          <div className="flex items-center justify-around flex-1">
+            {navItemsLeft.map((item) => {
+              const Icon = item.icon
+              const isActive = item.path === '/today'
+                ? (location.pathname === '/today' || location.pathname === '/')
+                : location.pathname.startsWith(item.path)
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.path}
+                  aria-label={item.ariaLabel}
+                  title={item.title}
+                  className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
+                    isActive
+                      ? 'text-emerald-600 font-extrabold'
+                      : 'text-slate-400 hover:text-slate-600 font-medium'
+                  }`}
+                >
+                  <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                  <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
+                </NavLink>
+              )
+            })}
           </div>
-        </nav>
-      )}
+
+          {/* CENTER PROMINENT ZELO Z ORBIT BUTTON */}
+          <div className="px-2 shrink-0 flex flex-col items-center -translate-y-4">
+            <ZeloOrbitButton
+              onClick={() => openAIPanel()}
+              isActive={isAIPanelOpen}
+            />
+            <span className="text-[10px] tracking-tight font-extrabold text-emerald-800 mt-0.5">
+              Z-AI
+            </span>
+          </div>
+
+          {/* Right Navigation Items (Tasks, More) */}
+          <div className="flex items-center justify-around flex-1">
+            {navItemsRight.map((item) => {
+              const Icon = item.icon
+              const isActive = location.pathname.startsWith(item.path)
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.path}
+                  aria-label={item.ariaLabel}
+                  title={item.title}
+                  className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all active:scale-95 ${
+                    isActive
+                      ? 'text-emerald-600 font-extrabold'
+                      : 'text-slate-400 hover:text-slate-600 font-medium'
+                  }`}
+                >
+                  <Icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-105 stroke-[2.4]' : 'stroke-[1.8]'}`} />
+                  <span className="text-[11px] tracking-tight mt-1 font-semibold">{item.label}</span>
+                </NavLink>
+              )
+            })}
+          </div>
+        </div>
+      </nav>
 
       {/* GLOBAL QUICK ADD MODAL / BOTTOM SHEET */}
       <QuickAddModal

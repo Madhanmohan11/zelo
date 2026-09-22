@@ -1,5 +1,6 @@
 import React from 'react'
-import { IndianRupee, CheckSquare, Sparkles, TrendingUp, Calendar, Clock } from 'lucide-react'
+import { IndianRupee, CheckSquare, TrendingUp, Calendar, Clock } from 'lucide-react'
+import zeloOrbitSvg from '../../assets/zelo-orbit.svg'
 import { formatINR } from '../../utils/formatters'
 
 export const AIActionCard = ({ metadata }) => {
@@ -70,7 +71,7 @@ export const AIActionCard = ({ metadata }) => {
       <div className="p-3.5 bg-gradient-to-br from-slate-900 to-emerald-950 text-white border border-emerald-800/40 rounded-2xl space-y-2.5 mt-2 text-xs shadow-md">
         <div className="flex items-center justify-between font-black text-emerald-300 border-b border-white/10 pb-1.5">
           <span className="flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <img src={zeloOrbitSvg} alt="Z-AI" className="w-4 h-4 object-contain" />
             <span>Today's Overview</span>
           </span>
           <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">

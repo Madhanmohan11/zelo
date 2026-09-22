@@ -705,44 +705,6 @@ export const ExpensesPage = () => {
         account={deactivatingAccount}
         isSubmitting={isSubmitting}
       />
-
-      {/* STICKY BOTTOM ACTION BAR */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200/90 py-2 px-3 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-        <div className="max-w-md mx-auto flex items-center justify-between gap-2 px-2">
-          {/* 1. FILTER BUTTON */}
-          <button
-            type="button"
-            onClick={() => setIsFilterSheetOpen(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-2xs border border-slate-200/90 transition-all active:scale-95 cursor-pointer"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-700" />
-            <span>Filter</span>
-          </button>
-
-          {/* 2. PROMINENT CENTER BUTTON (+ Add Money on Savings, + Add Expense on Expenses) */}
-          <button
-            type="button"
-            onClick={activeTab === 'savings' ? () => handleOpenAddMoney() : handleOpenAddExpense}
-            className="flex-[1.4] flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-white stroke-[2.5]" />
-            <span>{activeTab === 'savings' ? 'Add Money' : 'Add Expense'}</span>
-          </button>
-
-          {/* 3. SUMMARY BUTTON */}
-          <button
-            type="button"
-            onClick={() => {
-              const summaryEl = document.getElementById(activeTab === 'savings' ? 'savings-analytics-section' : 'expense-analytics-section')
-              if (summaryEl) summaryEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs shadow-2xs border border-slate-200/90 transition-all active:scale-95 cursor-pointer"
-          >
-            <BarChart3 className="w-3.5 h-3.5 text-slate-700" />
-            <span>Summary</span>
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

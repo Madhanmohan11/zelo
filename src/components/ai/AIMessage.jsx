@@ -1,5 +1,6 @@
 import React from 'react'
-import { Bot, User, Sparkles } from 'lucide-react'
+import { User } from 'lucide-react'
+import zeloOrbitSvg from '../../assets/zelo-orbit.svg'
 import { AIActionCard } from './AIActionCard'
 
 export const AIMessage = ({ message }) => {
@@ -10,10 +11,10 @@ export const AIMessage = ({ message }) => {
 
   return (
     <div className={`flex gap-2.5 my-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in duration-200`}>
-      {/* Bot Icon for assistant */}
+      {/* Z-AI Avatar Icon for assistant */}
       {!isUser && (
-        <div className="w-8 h-8 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 mt-0.5 border border-white">
-          <Sparkles className="w-4 h-4" />
+        <div className="w-8 h-8 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 mt-0.5 border border-white p-1">
+          <img src={zeloOrbitSvg} alt="Z-AI" className="w-full h-full object-contain" />
         </div>
       )}
 
